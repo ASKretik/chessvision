@@ -2,9 +2,12 @@
 # sleeps after 15 min idle with a ~60 s wake. No Supabase needed.
 #
 # ENV is "demo", not "production": production refuses to boot without the
-# Supabase keys. In demo mode accounts use the local SQLite store and puzzles
-# come from data/puzzles/subset.csv. On the free plan the disk is wiped on
-# every restart or redeploy, so accounts and puzzle ratings do not persist.
+# Supabase keys. Puzzles come from data/puzzles/subset.csv.
+#
+# Accounts, ratings and saved analyses live in Cloud Firestore when
+# FIREBASE_SERVICE_ACCOUNT is set (free Spark plan, no payment method). Without
+# it they fall back to a SQLite file, which the free plan's disk wipes on every
+# spin-down, restart and redeploy. GET /ready shows which one is in use.
 #
 # Upgrade path: set ENV=production and add the SUPABASE_* keys, plan: starter.
 services:
@@ -48,4 +51,8 @@ services:
       # Groq's free key. Entered in the Render dashboard, never committed.
       # Leave it blank and everything works except the written comments.
       - key: LLM_API_KEY
+        sync: false
+      # The Firebase service-account key file, pasted whole (JSON, or base64
+      # of it). Entered in the Render dashboard, never committed.
+      - key: FIREBASE_SERVICE_ACCOUNT
         sync: false

@@ -84,6 +84,11 @@ class AccountError(Exception):
     """A problem the user caused and can fix. Safe to show them."""
 
 
+class AccountStoreUnavailable(Exception):
+    """The store itself failed (network, credentials, quota). Not the user's
+    fault: the API answers 503, never 400, and never a stack trace."""
+
+
 @dataclass
 class User:
     id: str

@@ -37,7 +37,9 @@ import chess
 import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
+
+from accounts import AccountStoreUnavailable
 from pydantic import BaseModel, Field
 
 log = logging.getLogger("chessapp")
@@ -1009,14 +1011,28 @@ _accounts_error: Optional[str] = None
 
 
 def get_accounts() -> Optional[Any]:
-    """The local account store, or None if it could not be opened."""
+    """
+    The account store, or None if it could not be opened.
+
+    Firestore when FIREBASE_SERVICE_ACCOUNT is set -- the only option that
+    survives Render's free tier, whose disk is wiped on every spin-down --
+    and the SQLite file otherwise. Both have the same methods.
+    """
     global _accounts, _accounts_error
     if _accounts is not None or _accounts_error is not None:
         return _accounts
     try:
-        import accounts as accounts_mod            # noqa: PLC0415
-        _accounts = accounts_mod.AccountStore(settings.accounts_db_path)
-        log.info("Local accounts at %s", settings.accounts_db_path)
+        firebase_key = os.getenv("FIREBASE_SERVICE_ACCOUNT", "").strip()
+        if firebase_key:
+            import firestore_store                  # noqa: PLC0415
+            _accounts = firestore_store.FirestoreAccountStore.from_env(
+                firebase_key,
+                prefix=os.getenv("FIRESTORE_COLLECTION_PREFIX", ""))
+            log.info("Accounts in Firestore, project %s", _accounts.project_id)
+        else:
+            import accounts as accounts_mod        # noqa: PLC0415
+            _accounts = accounts_mod.AccountStore(settings.accounts_db_path)
+            log.info("Local accounts at %s", settings.accounts_db_path)
     except Exception as exc:
         _accounts_error = f"{type(exc).__name__}: {exc}"
         log.warning("Local accounts unavailable: %s", _accounts_error)
@@ -1060,7 +1076,7 @@ async def current_caller(
     # which would reject every local token with a confusing message.
     if _local_accounts_active():
         store = get_accounts()
-        local = store.session_user(token) if store else None
+        local = await asyncio.to_thread(store.session_user, token) if store else None
         if local is None:
             raise HTTPException(status.HTTP_401_UNAUTHORIZED,
                                 "Session expired. Sign in again.")
@@ -1298,17 +1314,17 @@ def _dev_puzzle_list() -> List[Any]:
     return _dev_puzzles
 
 
-def _stats_for(user_id: str) -> Dict[str, Any]:
+async def _stats_for(user_id: str) -> Dict[str, Any]:
     """
     Progress for a user, persisted when there is somewhere to persist it.
 
-    Routes to the SQLite account store when local accounts are active and
-    falls back to the in-memory dict otherwise, so every caller gets the
-    same shape without having to know which backend it came from.
+    Routes to the account store when local accounts are active and falls
+    back to the in-memory dict otherwise, so every caller gets the same
+    shape without having to know which backend it came from.
     """
     store = get_accounts() if _local_accounts_active() else None
     if store and user_id and user_id != "dev":
-        return store.stats(user_id)
+        return await asyncio.to_thread(store.stats, user_id)
     return _dev_stat(user_id)
 
 
@@ -1438,6 +1454,19 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(AccountStoreUnavailable)
+async def _account_store_down(request: Request, exc: AccountStoreUnavailable
+                              ) -> JSONResponse:
+    """
+    The account store failed -- Firestore unreachable, credentials revoked,
+    quota spent. A 503 with the reason, not a bare 500: the frontend shows
+    it as "unavailable", and the log says what to fix.
+    """
+    log.error("account store unavailable on %s: %s", request.url.path, exc)
+    return JSONResponse(status_code=503,
+                        content={"detail": f"Account storage is unavailable: {exc}"})
+
+
 # --------------------------------------------------------------------------
 # E.1  Health
 #
@@ -1484,8 +1513,11 @@ async def ready() -> Dict[str, Any]:
         "memory": {"ok": mem["admits_new_job"], "used_mb": mem["used_mb"],
                    "limit_mb": mem["limit_mb"], "source": mem["source"]},
     }
+    checks["accounts"] = await _accounts_probe()
     # Analysis core missing is expected pre-Part-A; it does not fail ready.
-    ok = db["ok"] and engine["ok"] and mem["admits_new_job"]
+    # Without Supabase, the account store stands in for it.
+    ok = ((db["ok"] or checks["accounts"]["ok"]) and engine["ok"]
+          and mem["admits_new_job"])
     return {"ready": ok, "checks": checks, "jobs": jobs.stats()}
 
 
@@ -1499,6 +1531,24 @@ async def ops_memory() -> Dict[str, Any]:
     Drive load with tools/profile_memory.py and read this afterwards.
     """
     return memory.report()
+
+
+async def _accounts_probe() -> Dict[str, Any]:
+    """Where accounts are stored, and whether that store answers right now."""
+    if supabase.configured:
+        return {"ok": True, "backend": "supabase"}
+    store = get_accounts()
+    if store is None:
+        return {"ok": False, "backend": None, "detail": _accounts_error}
+    if getattr(store, "backend", "sqlite") != "firestore":
+        # The SQLite file is local: on Render's free tier it is wiped on
+        # every spin-down, which is what `persistent` warns about.
+        return {"ok": True, "backend": "sqlite", "path": settings.accounts_db_path,
+                "persistent": False}
+    try:
+        return {**await asyncio.to_thread(store.ping), "persistent": True}
+    except Exception as exc:
+        return {"ok": False, "backend": "firestore", "detail": str(exc)[:300]}
 
 
 def _engine_probe() -> Dict[str, Any]:
@@ -1783,7 +1833,8 @@ async def _persist(job: Job, game_input: Any, req: Any = None) -> None:
     if store is not None:
         try:
             core_b = _load_commentary_core()
-            store.save_analysis(
+            await asyncio.to_thread(
+                store.save_analysis,
                 job.user_id,
                 source_type=getattr(game_input, "source_type", "unknown"),
                 # The dedup key. Re-analysing the same game updates that row
@@ -2038,7 +2089,7 @@ async def me(caller: Caller = Depends(require_user)) -> Dict[str, Any]:
     stats: Dict[str, Any] = {}
     if _dev_mode():
         return {"user_id": caller.user_id, "email": caller.email,
-                "stats": _stats_for(caller.user_id or "dev")}
+                "stats": await _stats_for(caller.user_id or "dev")}
     if supabase.configured:
         try:
             rows = await supabase.select(
@@ -2079,7 +2130,7 @@ async def my_analyses(
     """
     store = get_accounts() if _local_accounts_active() else None
     if store is not None:
-        rows = store.list_analyses(caller.user_id)
+        rows = await asyncio.to_thread(store.list_analyses, caller.user_id)
         return {"analyses": rows[offset:offset + min(max(limit, 1), 100)],
                 "limit": limit, "offset": offset, "total": len(rows),
                 "cap": _analyses_cap()}
@@ -2105,7 +2156,7 @@ async def my_analysis(
     """One full analysis. Filtered by user_id as well as id -- see select()."""
     store = get_accounts() if _local_accounts_active() else None
     if store is not None:
-        row = store.get_analysis(caller.user_id, analysis_id)
+        row = await asyncio.to_thread(store.get_analysis, caller.user_id, analysis_id)
         if row is None:
             # Not-found rather than forbidden: this must not reveal that an
             # analysis with this id exists under another account.
@@ -2351,13 +2402,14 @@ async def signup(req: CredentialsRequest, request: Request) -> Dict[str, Any]:
                             "Too many sign-ups from here. Try later.",
                             headers={"Retry-After": str(retry)})
     try:
-        user, token = store.create_user(req.username, req.password)
+        user, token = await asyncio.to_thread(store.create_user,
+                                              req.username, req.password)
     except accounts_mod.AccountError as exc:
         # The user's own mistake, and safe to repeat back verbatim -- these
         # messages name the rule that was broken.
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
     return {"token": token, "user": {"id": user.id, "username": user.username},
-            "stats": store.stats(user.id)}
+            "stats": await asyncio.to_thread(store.stats, user.id)}
 
 
 @app.post("/api/auth/login", tags=["auth"])
@@ -2371,11 +2423,12 @@ async def login(req: CredentialsRequest, request: Request) -> Dict[str, Any]:
                             "Too many attempts from here. Try later.",
                             headers={"Retry-After": str(retry)})
     try:
-        user, token = store.login(req.username, req.password)
+        user, token = await asyncio.to_thread(store.login,
+                                              req.username, req.password)
     except accounts_mod.AccountError as exc:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, str(exc)) from exc
     return {"token": token, "user": {"id": user.id, "username": user.username},
-            "stats": store.stats(user.id)}
+            "stats": await asyncio.to_thread(store.stats, user.id)}
 
 
 @app.post("/api/auth/logout", tags=["auth"])
@@ -2384,7 +2437,8 @@ async def logout(authorization: Optional[str] = Header(default=None)
     """Drop the session server-side, so the token stops working."""
     store = get_accounts()
     if store and authorization and authorization.lower().startswith("bearer "):
-        store.logout(authorization.split(" ", 1)[1].strip())
+        await asyncio.to_thread(store.logout,
+                                authorization.split(" ", 1)[1].strip())
     return {"ok": True}
 
 
@@ -2402,7 +2456,8 @@ async def delete_analysis(analysis_id: str,
     if store is None:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
                             "Persistence is not configured")
-    if not store.delete_analysis(caller.user_id, analysis_id):
+    if not await asyncio.to_thread(store.delete_analysis, caller.user_id,
+                                   analysis_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Analysis not found")
     return {"deleted": analysis_id}
 
@@ -2429,10 +2484,10 @@ async def next_puzzle(caller: Caller = Depends(require_user)) -> Dict[str, Any]:
     if _dev_mode():
         import random as _random
 
-        stat = _stats_for(caller.user_id or "dev")
+        stat = await _stats_for(caller.user_id or "dev")
         rating = stat["puzzle_rating"]
         store = get_accounts() if _local_accounts_active() else None
-        seen = (set(store.attempted_ids(caller.user_id))
+        seen = (set(await asyncio.to_thread(store.attempted_ids, caller.user_id))
                 if store and caller.user_id
                 else _dev_attempts.setdefault(caller.user_id or "dev", set()))
         for attempt in range(6):
@@ -2591,7 +2646,7 @@ async def submit_attempt(
         # The same validation and Elo code the database path uses.
         result = core.check_attempt(puzzle, req.moves)
         user = caller.user_id or "dev"
-        stat = _stats_for(user)
+        stat = await _stats_for(user)
         change = core.update_rating(stat["puzzle_rating"], puzzle.rating,
                                     result.solved, attempts=stat["puzzle_attempts"])
 
@@ -2600,9 +2655,9 @@ async def submit_attempt(
             # Attempt and stats move together, in one transaction -- the
             # same guarantee C.2 gets from a Postgres function. A rating
             # that does not match its own history is worse than no rating.
-            stat = store.record_attempt(caller.user_id, puzzle_id,
-                                        result.solved, change.after,
-                                        req.ms_taken)
+            stat = await asyncio.to_thread(
+                store.record_attempt, caller.user_id, puzzle_id,
+                result.solved, change.after, req.ms_taken)
         else:
             stat["puzzle_rating"] = change.after
             stat["puzzle_attempts"] += 1

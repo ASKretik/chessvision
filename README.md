@@ -103,6 +103,7 @@ batch_budget.py   token budgeting and salvage, so a truncated batch loses nothin
 rating_profile.py per-decision error profile behind the rating estimate
 partC.py          puzzles: the Lichess CC0 set, served one step at a time
 accounts.py       local accounts on SQLite: username, password, puzzle rating
+firestore_store.py  the same accounts in Cloud Firestore, over REST (used on Render)
 bots.py           Maia-2 bots at four strengths, plus Stockfish
 partE.py          FastAPI app: jobs, SSE, config, memory budget, rate limits
 spa.py            serves the built frontend from the same app
@@ -145,6 +146,13 @@ binding constraint and is enforced at runtime). To connect the two:
 Until then the app pages say the engine is offline instead of spinning forever. The
 Docker image can also serve the frontend and API together from one origin, with no CORS
 at all.
+
+**Accounts survive Render's free tier through Firestore.** Render's free disk is wiped
+whenever the service sleeps, so with `FIREBASE_SERVICE_ACCOUNT` set, accounts, puzzle
+progress and saved analyses are stored in Cloud Firestore instead (`firestore_store.py`,
+Firebase's free Spark plan, no payment method). It talks to Firestore's REST API with
+httpx rather than Google's SDK, which would cost tens of MB on a 512 MB instance.
+`GET /ready` reports where accounts live and whether that store answers.
 
 ---
 
