@@ -885,6 +885,126 @@ def main() -> int:
           rg.usage["provider"])
     check("[groq] comments produced", len(rg.comments) > 0, str(len(rg.comments)))
 
+    # ---------------- Groq's 8,000-token request ceiling ----------------
+    print("B.4c Groq request ceiling")
+    import httpx
+    import groq as groq_sdk
+
+    def game_of(n_plies: int) -> partB.GameFacts:
+        """Mostly quiet moves, with an eventful one every seventh ply."""
+        moves = []
+        for ply in range(1, n_plies + 1):
+            eventful = ply % 7 == 0
+            moves.append(fact(
+                ply=ply, move_number=(ply + 1) // 2,
+                color="white" if ply % 2 else "black", san="Nf3",
+                phase="middlegame", cp_after=35 - ply,
+                label="blunder" if eventful else "best",
+                win_drop=18.5 if eventful else 0.0,
+                motifs=[{"motif": "fork"}] if eventful else []))
+        return partB.GameFacts(
+            source_type="pgn", headers={}, opening={"eco": "C50"}, result="1-0",
+            players={"white": {"name": "W"}, "black": {"name": "B"}},
+            moves=moves, recurring={})
+
+    def charged(req: Dict[str, Any]) -> int:
+        text = "".join(m["content"] for m in req["messages"])
+        return (partB.estimate_tokens(text) + partB.REQUEST_OVERHEAD_TOKENS
+                + req["max_completion_tokens"])
+
+    cg, recg = make_commentator(provider="groq")
+    cg.game_pass(game_of(300))
+    long_req = recg.requests[-1]
+    long_text = long_req["messages"][-1]["content"]
+    check("a 150-move game pass is trimmed to fit Groq's 8,000-token ceiling",
+          charged(long_req) <= 8000, str(charged(long_req)))
+    check("and every eventful move survives the trim",
+          all(f'"ply":{p},' in long_text for p in range(7, 301, 7)))
+    check("only quiet moves were shortened or sampled",
+          long_text.count('"ply":') < 300 and '"motifs":["fork"]' in long_text)
+
+    cg.game_pass(game_of(40))
+    short_text = recg.requests[-1]["messages"][-1]["content"]
+    check("a 20-move game pass is sent whole, nothing trimmed",
+          short_text.count('"ply":') == 40 and short_text.count('"phase"') == 40)
+    check("and as compact JSON, with no indentation to pay for",
+          "\n " not in short_text and '": ' not in short_text)
+
+    ca, reca = make_commentator(provider="anthropic")
+    ca.game_pass(game_of(300))
+    check("Anthropic has no such ceiling, so its timeline is never trimmed",
+          reca.requests[-1]["messages"][0]["content"][-1]["text"].count('"ply":') == 300)
+
+    def groq_error(status_code: int, message: str) -> Exception:
+        resp = httpx.Response(status_code,
+                              request=httpx.Request("POST", "https://api.groq.com/x"))
+        return groq_sdk.APIStatusError(message, response=resp, body=None)
+
+    oversize = ("Error code: 413 - Request too large for model `openai/gpt-oss-120b` "
+                "in organization `org_x` service tier `on_demand` on tokens per "
+                "minute (TPM): Limit 8000, Requested 9181, please reduce your "
+                "message size and try again.")
+
+    class RaisingGroq(FakeGroqClient):
+        """413s any move batch bigger than `max_moves`, like Groq would."""
+
+        def __init__(self, owner: Recorder, max_moves: int, message: str) -> None:
+            super().__init__(owner)
+            self.max_moves, self.message = max_moves, message
+
+        def create(self, **kwargs: Any) -> FakeGroqResponse:
+            asked = kwargs["messages"][-1]["content"]
+            if asked.startswith("Game context") and asked.count('"ply":') > self.max_moves:
+                self.owner.record(kwargs)
+                raise groq_error(413, self.message)
+            return super().create(**kwargs)
+
+    slept: List[float] = []
+    real_sleep = partB.time.sleep
+    partB.time.sleep = lambda s: slept.append(s)
+    try:
+        cr, recr = make_commentator(provider="groq")
+        cr._client = RaisingGroq(recr, max_moves=0, message=oversize)
+        try:
+            cr.move_pass([fact(ply=9)], GameNarrativeStub(), {})
+            check("an oversize request raises", False, "no error")
+        except partB.CommentaryError as exc:
+            check("a request bigger than the whole window fails at once, unretried",
+                  len(recr.requests) == 1 and not slept,
+                  f"{len(recr.requests)} requests, slept {slept}")
+            check("and the error says so in full, not cut off mid-word",
+                  "this request needed 9181, the limit is 8000" in str(exc), str(exc))
+            check("and it counts as 'too big', so the move pass splits it",
+                  partB.batch_budget.is_truncation(exc))
+
+        cs, recs = make_commentator(provider="groq")
+        cs._client = RaisingGroq(recs, max_moves=2, message=oversize)
+        batch = [fact(ply=p, label="mistake", win_drop=12.0) for p in (3, 5, 9, 11, 15, 17)]
+        salvage = partB.batch_budget.run_with_split_retry(
+            batch, lambda b: cs.move_pass(b, GameNarrativeStub(), {}),
+            error_type=partB.CommentaryError)
+        check("an oversize batch of six is split until it fits, losing nothing",
+              not salvage.failed and salvage.splits >= 1, str(salvage))
+        check("with no time spent sleeping on a request that could never fit",
+              not slept, str(slept))
+
+        cw, recw = make_commentator(provider="groq")
+        cw._client = RaisingGroq(recw, max_moves=0,
+                                 message="Error code: 413 - over the limit right now")
+        try:
+            cw.move_pass([fact(ply=9)], GameNarrativeStub(), {})
+        except partB.CommentaryError:
+            pass
+        check("a 413 that might fit later is still waited out and retried",
+              len(recw.requests) == partB.GroqCommentator.RATE_LIMIT_RETRIES + 1
+              and len(slept) == partB.GroqCommentator.RATE_LIMIT_RETRIES,
+              f"{len(recw.requests)} requests, {len(slept)} sleeps")
+    finally:
+        partB.time.sleep = real_sleep
+
+    check("the Groq batch is the provider's own, not a server-wide override",
+          partB.GroqCommentator.default_batch_size == 6)
+
     width = max(len(n) for n, _, _ in _results)
     print()
     for name, ok, detail in _results:

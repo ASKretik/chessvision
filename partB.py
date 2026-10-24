@@ -1760,6 +1760,9 @@ class BaseCommentator:
     default_batch_size = MOVES_PER_BATCH
     # Highest reasoning effort this provider can afford. None means no cap.
     max_effort: Optional[str] = None
+    # The most one request may be charged (prompt + reserved output), or None
+    # for no ceiling. When set, the game pass trims its timeline to fit.
+    request_token_limit: Optional[int] = None
 
     _EFFORT_ORDER = ("low", "medium", "high")
 
@@ -1819,17 +1822,32 @@ class BaseCommentator:
         This is what lets the move comments reference the game instead of
         floating free, so it runs first and its output feeds every batch.
         """
+        entries = [_timeline_entry(m) for m in facts.moves]
         payload = {
             "players": facts.players,
             "opening": facts.opening,
             "result": facts.result,
             "recurring_patterns": facts.recurring,
-            "timeline": [_timeline_entry(m) for m in facts.moves],
+            "timeline": entries,
         }
+        text = _compact(payload)
+        if self.request_token_limit:
+            # Groq's free tier rejects any single request over 8,000 tokens
+            # outright (413), and a 40-move timeline was 9,200. Quiet moves
+            # are shortened first, so every move keeps its notation and its
+            # evaluation and the arc stays readable; only if that is not
+            # enough are some quiet moves left out.
+            room = (self.request_token_limit - self.game_pass_tokens
+                    - estimate_tokens(SYSTEM_GAME) - REQUEST_OVERHEAD_TOKENS)
+            for level in (1, 2, 3):
+                if estimate_tokens(text) <= room:
+                    break
+                payload["timeline"] = _trim_timeline(entries, level)
+                text = _compact(payload)
         data = self._request(
             system=SYSTEM_GAME,
             stable=[],
-            volatile=["Fact timeline:\n" + json.dumps(payload, indent=1)],
+            volatile=["Fact timeline:\n" + text],
             schema=GAME_SCHEMA,
             schema_name="game_narrative",
             effort="high",
@@ -1857,9 +1875,9 @@ class BaseCommentator:
         data = self._request(
             system=SYSTEM_MOVE,
             # Identical across every batch of this game -> cacheable.
-            stable=["Game context:\n" + json.dumps(context, indent=1)],
+            stable=["Game context:\n" + _compact(context)],
             volatile=["Comment on these moves:\n"
-                      + json.dumps([m.for_prompt() for m in batch], indent=1)],
+                      + _compact([m.for_prompt() for m in batch])],
             schema=MOVE_SCHEMA,
             schema_name="move_comments",
             # LOW, not medium. B.2 synthesises an arc across forty moves and
@@ -2079,19 +2097,22 @@ class GroqCommentator(BaseCommentator):
     game_pass_tokens = 2200          # the narrative is one longer answer
     move_pass_tokens = 1800
 
-    # Five, not three. Without prompt caching SYSTEM_MOVE (~1,000 tokens) is
-    # resent on every batch, so batching is the only way to stop paying for
-    # it repeatedly. Measured for a 9-comment game:
-    #     batch 3 -> 3 calls, ~10,450 tokens
-    #     batch 5 -> 2 calls, ~9,170 tokens
-    # Fewer, larger requests cost less in total while the per-request peak
-    # (~5,600) still clears the 8,000/minute window. Note that a full game is
-    # close to that whole window, so expect ~60-90s per game on the free tier
-    # and do not run games back to back.
-    default_batch_size = 5
+    # Six. Without prompt caching SYSTEM_MOVE (~1,800 tokens) is resent on
+    # every batch, so fewer, larger batches cost less in total -- and on an
+    # 8,000/minute window, total tokens ARE the wait. Measured with compact
+    # JSON on 30-, 40- and 60-move games (prompt + schema + reserved output):
+    #     batch 4 -> 4,863-5,002     batch 5 -> 5,438-5,631
+    #     batch 6 -> 6,011-6,266     (the indent=1 prompts were 7,566-7,963)
+    # Six leaves ~1,700 tokens of headroom, and a batch that still does not
+    # fit is split at once rather than retried (see _request).
+    default_batch_size = 6
 
-    # 413 here means "larger than your rate limit allows", not "malformed",
-    # so it is worth waiting out rather than failing the batch.
+    # Groq rejects a single request charged above the per-minute window with
+    # 413, before it ever looks at what has been used this minute.
+    request_token_limit = 8000
+
+    # A 413 or 429 for a request that fits the window is worth waiting out.
+    # One that is bigger than the whole window is not -- see _request.
     RATE_LIMIT_RETRIES = 3
 
     def _key_from_env(self) -> Optional[str]:
@@ -2196,6 +2217,19 @@ class GroqCommentator(BaseCommentator):
                     raise CommentaryError(
                         "Groq daily free quota exhausted. "
                         + _groq_limit_summary(detail)
+                    ) from exc
+
+                # "Limit 8000, Requested 9181": bigger than the whole window,
+                # so no amount of waiting admits it. Fail at once, so the move
+                # pass splits the batch now instead of after three sleeps of
+                # 22-65 seconds -- which is where minutes of analysis went.
+                too_big = _GROQ_TOO_LARGE_RE.search(detail)
+                if status == 413 and too_big and (
+                        int(too_big.group("requested")) > int(too_big.group("limit"))):
+                    raise CommentaryError(
+                        "Groq rejected the request as larger than the rate "
+                        "limit allows -- it can never fit, so it was not "
+                        "retried. " + _groq_limit_summary(detail)
                     ) from exc
 
                 retryable = isinstance(exc, groq.RateLimitError) or status in (413, 429)
@@ -2306,6 +2340,9 @@ _GROQ_NUMBERS_RE = re.compile(
     r"Limit (?P<limit>\d+), Used (?P<used>\d+)(?:, Requested (?P<requested>\d+))?",
     re.IGNORECASE,
 )
+# A 413 says "Limit 8000, Requested 9181" with no "Used" figure.
+_GROQ_TOO_LARGE_RE = re.compile(
+    r"Limit (?P<limit>\d+), Requested (?P<requested>\d+)", re.IGNORECASE)
 _GROQ_RETRY_RE = re.compile(r"try again in ([0-9hms.]+?)\.?(?:\s|$|'|\")", re.IGNORECASE)
 
 
@@ -2319,12 +2356,16 @@ def _groq_limit_summary(detail: str) -> str:
     """
     bits = []
     kind = _GROQ_KIND_RE.search(detail)
+    label = kind.group(1).strip() if kind else "limit"
     nums = _GROQ_NUMBERS_RE.search(detail)
+    too_big = _GROQ_TOO_LARGE_RE.search(detail)
     if nums:
-        label = kind.group(1).strip() if kind else "limit"
         bits.append(f"{label}: used {nums.group('used')} of {nums.group('limit')}")
         if nums.group("requested"):
             bits.append(f"this request needed {nums.group('requested')}")
+    elif too_big:
+        bits.append(f"{label}: this request needed {too_big.group('requested')}, "
+                    f"the limit is {too_big.group('limit')}")
     retry = _GROQ_RETRY_RE.search(detail)
     if retry:
         bits.append(f"retry in {retry.group(1).rstrip('.')}")
@@ -2360,6 +2401,64 @@ def make_commentator(
         )
     return PROVIDERS[name](api_key=api_key, model=model, max_batches=max_batches)
 
+
+
+def _compact(obj: Any) -> str:
+    """
+    JSON with no indentation. Groq's free tier charges every prompt token
+    against an 8,000/minute window, and indent=1 whitespace was a large share
+    of the game pass. The model reads compact JSON just as well.
+    """
+    return json.dumps(obj, separators=(",", ":"), ensure_ascii=False)
+
+
+# Characters per token for compact JSON fact payloads on gpt-oss (o200k
+# tokenizer). Measured 2.9-3.3 on real games; 2.7 errs towards over-counting,
+# which only ever trims a little earlier than strictly needed.
+CHARS_PER_TOKEN = 2.7
+# Chat framing and the JSON schema Groq decodes against (~130 tokens), with
+# margin, since they count against the same request ceiling.
+REQUEST_OVERHEAD_TOKENS = 400
+
+
+def estimate_tokens(text: str) -> int:
+    """A conservative token count, without shipping a tokenizer."""
+    return int(len(text) / CHARS_PER_TOKEN) + 1
+
+
+def _is_quiet(entry: Dict[str, Any]) -> bool:
+    """A move where nothing happened: a good move with no tactic, loose
+    piece, material change or mate. The narrative needs these only as the
+    thread between events."""
+    return (entry.get("label") in ("best", "excellent", "good")
+            and not any(k in entry for k in (
+                "material_delta", "left_loose", "motifs", "mate",
+                "found_only_move")))
+
+
+def _trim_timeline(entries: List[Dict[str, Any]], level: int) -> List[Dict[str, Any]]:
+    """
+    Shrink the game-pass timeline, quiet moves only, in steps:
+
+      1  quiet moves keep ply, move, label and evaluation
+      2  quiet moves keep ply, move and evaluation
+      3  as 2, and only every third quiet move is kept at all
+
+    Eventful moves are never touched: they are what the narrative is about.
+    """
+    keep = {1: ("ply", "move", "label", "cp_after"),
+            2: ("ply", "move", "cp_after")}[min(level, 2)]
+    out: List[Dict[str, Any]] = []
+    quiet_seen = 0
+    for e in entries:
+        if not _is_quiet(e):
+            out.append(e)
+            continue
+        quiet_seen += 1
+        if level >= 3 and quiet_seen % 3 != 1:
+            continue
+        out.append({k: e[k] for k in keep if k in e})
+    return out
 
 
 def _timeline_entry(f: MoveFacts) -> Dict[str, Any]:

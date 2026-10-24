@@ -129,7 +129,11 @@ class Settings:
         # B.4 cost control. The per-game cap bounds one analysis; the
         # per-hour rate limit above bounds one caller.
         self.max_comments_per_game: int = int(os.getenv("MAX_COMMENTS_PER_GAME", "18"))
-        self.comment_batch_size: int = int(os.getenv("COMMENT_BATCH_SIZE", "6"))
+        # Unset means the provider's own default: Groq's free-tier window
+        # needs smaller batches (5) than Anthropic's. A fixed 6 here used to
+        # override that and put every Groq move batch at the 8,000 limit.
+        _batch = os.getenv("COMMENT_BATCH_SIZE", "").strip()
+        self.comment_batch_size: Optional[int] = int(_batch) if _batch else None
         # C.1b. SQLite file for local accounts and puzzle progress. Outside
         # the image on a real deploy (a mounted disk), beside the code here.
         self.accounts_db_path: str = os.getenv("ACCOUNTS_DB", "data/app.db")
