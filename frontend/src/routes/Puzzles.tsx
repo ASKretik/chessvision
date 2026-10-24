@@ -12,6 +12,7 @@ import { useFeature } from '../context/ConfigContext';
 import { useAuth } from '../context/AuthContext';
 import { SignIn } from '../components/SignIn';
 import { Board } from '../components/Board';
+import { Piece } from '../components/pieces';
 import { FeatureOff } from '../components/FeatureOff';
 import './Puzzles.css';
 
@@ -175,6 +176,24 @@ export function Puzzles() {
         <div className="pz-board-col">
           {fen && puzzle ? (
             <>
+              {/* The puzzle FEN is already past the opponent's setup move, so
+                  the side to move is always the player's colour. */}
+              <div className={`pz-side is-${puzzle.side_to_move}`}>
+                <span className="pz-side-icon" aria-hidden="true">
+                  <Piece code={puzzle.side_to_move === 'white' ? 'K' : 'k'} />
+                </span>
+                <span>
+                  {done ? 'You played as ' : 'You play as '}
+                  <b>{puzzle.side_to_move === 'white' ? 'White' : 'Black'}</b>
+                  {!done && (
+                    <span className="dim">
+                      {' '}
+                      · find the best move for{' '}
+                      {puzzle.side_to_move === 'white' ? 'White' : 'Black'}
+                    </span>
+                  )}
+                </span>
+              </div>
               <Board
                 fen={fen}
                 orientation={puzzle.side_to_move}

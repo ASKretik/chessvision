@@ -52,6 +52,42 @@
   border: 1px solid var(--border);
 }
 
+/* Which colour the player has, above the board, before the first move. */
+.pz-side {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+  padding: var(--sp-2) var(--sp-4) var(--sp-2) var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  font-size: var(--fs-md);
+}
+.pz-side b {
+  color: var(--text);
+}
+.pz-side-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  /* A board square, so both king colours read as they do on the board. */
+  background: var(--sq-dark);
+}
+.pz-side-icon .piece {
+  width: 32px;
+  height: 32px;
+}
+.pz-side.is-white {
+  box-shadow: inset 4px 0 0 var(--eval-white);
+}
+.pz-side.is-black {
+  box-shadow: inset 4px 0 0 #000;
+}
+
 .pz-loading {
   padding: var(--sp-5);
   color: var(--text-dim);
