@@ -1215,8 +1215,8 @@ def _load_puzzle_core() -> Any:
 # --------------------------------------------------------------------------
 DEV_PUZZLE_CSV = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "data", "puzzles", "dev_sample.csv")
-# The real set: 2,000 puzzles, stratified by rating. Gitignored and built
-# offline, so its absence is normal in a fresh checkout.
+# The real set: 2,000 puzzles, stratified by rating, built offline by
+# tools/build_puzzle_subset.py. Committed (416 KB, CC0) so a deploy has it.
 SUBSET_PUZZLE_CSV = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "data", "puzzles", "subset.csv")
 
@@ -1409,7 +1409,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )
 

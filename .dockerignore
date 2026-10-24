@@ -9,7 +9,9 @@ plan.md
 # be installable in the deployed image (E.3).
 tools/
 
-data/puzzles/
+data/puzzles/*
+!data/puzzles/subset.csv
+!data/puzzles/dev_sample.csv
 tests/
 
 # E.4 frontend. The SOURCE is needed by the Node build stage; the installed

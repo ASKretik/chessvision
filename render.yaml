@@ -1,8 +1,15 @@
-# Render blueprint (E.1). Free tier: 750 h/mo, 512 MB, sleeps after 15 min
-# idle with a ~60 s wake. Upgrade path if E.3 profiling fails: plan: starter.
+# Render blueprint -- the FREE setup (E.1). Free tier: 750 h/mo, 512 MB,
+# sleeps after 15 min idle with a ~60 s wake. No Supabase needed.
+#
+# ENV is "demo", not "production": production refuses to boot without the
+# Supabase keys. In demo mode accounts use the local SQLite store and puzzles
+# come from data/puzzles/subset.csv. On the free plan the disk is wiped on
+# every restart or redeploy, so accounts and puzzle ratings do not persist.
+#
+# Upgrade path: set ENV=production and add the SUPABASE_* keys, plan: starter.
 services:
   - type: web
-    name: chess-analysis-api
+    name: chessvision-api
     runtime: docker
     plan: free
     region: oregon
@@ -11,7 +18,16 @@ services:
     autoDeploy: true
     envVars:
       - key: ENV
-        value: production
+        value: demo
+      # The GitHub Pages site. CORS allows only this origin.
+      - key: FRONTEND_ORIGIN
+        value: https://askretik.github.io
+      # A.5 rating model, fetched at BUILD time (Render passes env vars to the
+      # Docker build as build args). The release asset is on this repo.
+      - key: MAIA2_ONNX_URL
+        value: https://github.com/ASKretik/chessvision/releases/download/maia2-rapid-v1/maia2.onnx
+      - key: MAIA2_ONNX_SHA256
+        value: 7b46936e13ae0adb8758805f983b2161e7de9ee48c4eb63c626e3cb682b0b655
       # E.3 knobs. Raise MEMORY_BUDGET_MB to 2048 if you move to Starter.
       - key: STOCKFISH_HASH_MB
         value: "16"
@@ -29,14 +45,7 @@ services:
         value: "18"
       - key: RATE_LIMIT_PER_HOUR
         value: "20"
-      # Set in the Render dashboard, never committed (E.5).
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_ANON_KEY
-        sync: false
-      - key: SUPABASE_SERVICE_KEY
-        sync: false
+      # Groq's free key. Entered in the Render dashboard, never committed.
+      # Leave it blank and everything works except the written comments.
       - key: LLM_API_KEY
-        sync: false
-      - key: FRONTEND_ORIGIN
         sync: false

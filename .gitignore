@@ -4,7 +4,9 @@ __pycache__/
 *.pyc
 
 # The puzzle dump (C.3) is hundreds of MB -- subset it at build time.
-data/puzzles/
+data/puzzles/*
+!data/puzzles/subset.csv
+!data/puzzles/dev_sample.csv
 
 # data/openings/*.tsv IS committed: 400 KB of CC0 data, and the image must
 # not depend on a GitHub fetch at build or boot time.
