@@ -60,19 +60,26 @@ COPY --from=frontend /static /app/static
 #
 # Unset is allowed and the image still builds -- A.5 then reports the rating
 # estimate unavailable with a reason and the other five sub-parts are
-# unaffected. MAIA2_ONNX_SHA256 is verified when provided.
+# unaffected. A failed download or a checksum mismatch degrades the same way
+# instead of failing the whole deploy: the bad or partial file is deleted, so
+# a wrong model is never loaded. MAIA2_ONNX_SHA256 is verified when provided.
 ARG MAIA2_ONNX_URL=""
 ARG MAIA2_ONNX_SHA256=""
-RUN set -eu; \
+RUN set -u; \
     if [ -n "$MAIA2_ONNX_URL" ]; then \
       echo "Fetching Maia-2 weights..."; \
       mkdir -p /app/models; \
-      python -c "import urllib.request,sys; urllib.request.urlretrieve(sys.argv[1], sys.argv[2])" \
-        "$MAIA2_ONNX_URL" /app/models/maia2.onnx; \
-      if [ -n "$MAIA2_ONNX_SHA256" ]; then \
-        echo "$MAIA2_ONNX_SHA256  /app/models/maia2.onnx" | sha256sum -c -; \
+      if ! python -c "import urllib.request,sys; urllib.request.urlretrieve(sys.argv[1], sys.argv[2])" \
+          "$MAIA2_ONNX_URL" /app/models/maia2.onnx; then \
+        echo "WARNING: could not download $MAIA2_ONNX_URL -- rating estimate disabled"; \
+        rm -f /app/models/maia2.onnx; \
+      elif [ -n "$MAIA2_ONNX_SHA256" ] && \
+          ! echo "$MAIA2_ONNX_SHA256  /app/models/maia2.onnx" | sha256sum -c -; then \
+        echo "WARNING: maia2.onnx checksum mismatch -- deleted, rating estimate disabled"; \
+        rm -f /app/models/maia2.onnx; \
+      else \
+        ls -lh /app/models/maia2.onnx; \
       fi; \
-      ls -lh /app/models/maia2.onnx; \
     else \
       echo "MAIA2_ONNX_URL unset -- A.5 rating estimate will report unavailable"; \
     fi
