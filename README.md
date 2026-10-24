@@ -3,8 +3,7 @@
 A chess game analyser that tells you not just *which* move went wrong, but *why*, and
 grounds every sentence it writes in something the engine actually found.
 
-**[Open it](https://askretik.github.io/chessvision/)** · **[API contract](docs/api-contract.md)** ·
-**[Design decisions](decisions.md)**
+**[Open it](https://askretik.github.io/chessvision/)**
 
 Paste a Lichess or Chess.com link, drop in a PGN, or set up any position from a FEN.
 Stockfish grades every move — best, inaccuracy, mistake, blunder — using Lichess's
@@ -153,18 +152,6 @@ progress and saved analyses are stored in Cloud Firestore instead (`firestore_st
 Firebase's free Spark plan, no payment method). It talks to Firestore's REST API with
 httpx rather than Google's SDK, which would cost tens of MB on a 512 MB instance.
 `GET /ready` reports where accounts live and whether that store answers.
-
----
-
-## Reading further
-
-- **[decisions.md](decisions.md)** — every non-obvious choice and every bug worth
-  remembering, including the commentary material-claim bug and the batch truncation fix.
-- **[plan.md](plan.md)** — the original build plan, Parts A–F, with the time budget and
-  the open decisions.
-- **[docs/api-contract.md](docs/api-contract.md)** — every endpoint and its real payload.
-- **[frontend/README.md](frontend/README.md)** — how the SPA is wired to the backend, and
-  the route collisions between pages and API paths.
 
 ---
 
