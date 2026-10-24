@@ -20,3 +20,7 @@ tests/
 frontend/node_modules/
 frontend/dist/
 static/
+
+# Host-side deploy config. deploy/aws/.env holds secrets and must never
+# be copied into the image (".env" above only matches the root one).
+deploy/

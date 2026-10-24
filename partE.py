@@ -485,6 +485,7 @@ class MemoryBudget:
     CG2_CURRENT = "/sys/fs/cgroup/memory.current"
     CG2_MAX = "/sys/fs/cgroup/memory.max"
     CG2_PEAK = "/sys/fs/cgroup/memory.peak"
+    CG2_STAT = "/sys/fs/cgroup/memory.stat"
     CG1_USAGE = "/sys/fs/cgroup/memory/memory.usage_in_bytes"
     CG1_LIMIT = "/sys/fs/cgroup/memory/memory.limit_in_bytes"
     CG1_PEAK = "/sys/fs/cgroup/memory/memory.max_usage_in_bytes"
@@ -524,6 +525,15 @@ class MemoryBudget:
         raw_limit = _read_int(self.CG2_MAX)   # may be the literal "max"
         limit = self._effective_limit(raw_limit)
         detail: Dict[str, Any] = {}
+        # memory.current includes the page cache, which Linux grows to fill
+        # whatever the limit allows. Inactive file pages are the first thing
+        # the kernel reclaims under pressure, so they are not "used" for
+        # admission -- otherwise a warm container sits at its limit and
+        # refuses every job. Same working-set figure the kubelet uses.
+        inactive_file = _read_stat(self.CG2_STAT).get("inactive_file", 0)
+        if inactive_file:
+            detail["reclaimable_cache_mb"] = round(inactive_file / MB, 1)
+            used = max(used - inactive_file, 0)
         kernel_peak = _read_int(self.CG2_PEAK)
         if kernel_peak is not None:
             # The kernel's own high-water mark: survives our sampling gaps,
@@ -743,6 +753,20 @@ def _safe_name(proc: Any) -> str:
         return proc.name()
     except Exception:
         return "?"
+
+
+def _read_stat(path: str) -> Dict[str, int]:
+    """Parse a cgroup memory.stat file ("key value" per line). Absent -> {}."""
+    out: Dict[str, int] = {}
+    try:
+        with open(path) as fh:
+            for line in fh:
+                key, _, value = line.partition(" ")
+                if value.strip().isdigit():
+                    out[key] = int(value)
+    except OSError:
+        pass
+    return out
 
 
 def _read_int(path: str) -> Optional[int]:

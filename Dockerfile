@@ -111,8 +111,10 @@ ENV STOCKFISH_PATH=/usr/games/stockfish \
     ENV=production \
     PORT=10000
 
-# Non-root, as Render expects.
-RUN useradd -m -u 10001 appuser && chown -R appuser /app
+# Non-root, as Render expects. /app/state is where a host with a persistent
+# volume keeps the accounts database (ACCOUNTS_DB); a named volume mounted
+# there inherits this ownership.
+RUN useradd -m -u 10001 appuser && mkdir -p /app/state && chown -R appuser /app
 USER appuser
 
 EXPOSE 10000

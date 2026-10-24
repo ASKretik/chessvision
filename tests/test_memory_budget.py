@@ -39,8 +39,14 @@ class FakeCgroup:
         self.budget = budget_mb
         self.headroom = headroom_mb
 
-    def v2(self, current_mb: float, max_mb: float | str, peak_mb: float | None = None):
+    def v2(self, current_mb: float, max_mb: float | str, peak_mb: float | None = None,
+           inactive_file_mb: float | None = None):
         b = partE.MemoryBudget(self.budget, self.headroom)
+        if inactive_file_mb is not None:
+            self._write("memory.stat", f"anon 1\ninactive_file {int(inactive_file_mb * MB)}\n")
+            b.CG2_STAT = os.path.join(self.dir, "memory.stat")
+        else:
+            b.CG2_STAT = os.path.join(self.dir, "nonexistent")
         self._write("memory.current", int(current_mb * MB))
         self._write("memory.max", max_mb if isinstance(max_mb, str) else int(max_mb * MB))
         b.CG2_CURRENT = os.path.join(self.dir, "memory.current")
@@ -71,6 +77,16 @@ def main() -> int:
     check("limit from cgroup", r.limit_mb == 512.0, str(r.limit_mb))
     check("free_mb computed", r.free_mb == 212.0, str(r.free_mb))
     check("fraction computed", r.fraction == round(300 / 512, 4), str(r.fraction))
+
+    # ---- reclaimable page cache is not counted as used --------------
+    # A warm container's memory.current sits at its limit because Linux fills
+    # free memory with file cache; counting that refused every new job.
+    b = fc.v2(current_mb=500, max_mb=512, inactive_file_mb=200)
+    r = b.read()
+    check("inactive file cache subtracted", r.used_mb == 300.0, str(r.used_mb))
+    check("reclaimable cache reported", r.detail.get("reclaimable_cache_mb") == 200.0,
+          str(r.detail.get("reclaimable_cache_mb")))
+    check("cache-heavy container still admits", b.admit()[0], str(b.admit()))
 
     # ---- an unlimited cgroup falls back to the configured budget ----
     b = fc.v2(current_mb=100, max_mb="max")

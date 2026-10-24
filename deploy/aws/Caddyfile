@@ -1,0 +1,6 @@
+# Caddy obtains and renews the certificate for SITE_ADDRESS by itself.
+# No `encode` here: compressing the job event stream would buffer it, and
+# the analysis page would stop updating live.
+{$SITE_ADDRESS} {
+	reverse_proxy api:10000
+}
