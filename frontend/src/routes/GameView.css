@@ -1,0 +1,219 @@
+/* The analysis page: board column + rail, exactly the two-column shell the
+   spec draws. Below 1000px the rail drops under the board rather than
+   squeezing — a rail narrower than ~340px turns the move list into a table. */
+.gv {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: var(--sp-4) var(--sp-5) var(--sp-6);
+  display: grid;
+  gap: var(--sp-5);
+  grid-template-columns: minmax(0, 1fr) minmax(var(--rail-min), var(--rail-max));
+  align-items: start;
+}
+@media (max-width: 999px) {
+  .gv {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--sp-3);
+  }
+}
+
+.gv-board-col {
+  min-width: 0;
+  max-width: var(--board-max);
+}
+
+/* The eval bar and the board are one row so the bar matches the board's
+   height exactly; `align-items: stretch` is what makes that automatic. */
+.gv-board-row {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: stretch;
+}
+
+.gv-controls {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+  flex-wrap: wrap;
+}
+.gv-nav,
+.gv-tools {
+  display: flex;
+  gap: var(--sp-2);
+}
+.gv-nav .btn {
+  min-width: 44px;
+  font-size: var(--fs-sm);
+}
+
+.gv-copied {
+  margin: var(--sp-1) 0 0;
+  min-height: 1.2em;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+.gv-explore {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--raised);
+  border-radius: var(--radius);
+  font-size: var(--fs-sm);
+}
+
+.gv-err {
+  color: var(--blunder-text);
+  font-size: var(--fs-sm);
+}
+
+/* --- rail ------------------------------------------------------------- */
+
+.gv-rail {
+  position: sticky;
+  top: calc(var(--header-h) + var(--sp-4));
+  max-height: calc(100vh - var(--header-h) - var(--sp-6));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+@media (max-width: 999px) {
+  .gv-rail {
+    position: static;
+    max-height: none;
+  }
+}
+
+.gv-evalhead {
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+.gv-eval {
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  display: inline;
+}
+.gv-evalsub {
+  display: inline;
+  margin-left: var(--sp-2);
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+.gv-best {
+  margin-top: var(--sp-1);
+  font-size: var(--fs-sm);
+}
+.gv-bestlabel {
+  color: var(--text-dim);
+}
+.gv-best .mono {
+  color: var(--link);
+}
+
+/* The move list is the only thing that scrolls, so the evaluation and the
+   graph stay put while you read down the game. */
+.gv-rail .movelist {
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+.gv-writing,
+.gv-nocomment {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+}
+.gv-nocomment {
+  border-bottom: 0;
+  border-top: 1px solid var(--border);
+}
+
+/* --- the report strip ------------------------------------------------- */
+
+.gv-strip {
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-top: var(--sp-5);
+}
+.gv-card {
+  padding: var(--sp-4);
+}
+.gv-card h2 {
+  margin: 0;
+  font-size: var(--fs-md);
+}
+.gv-card p {
+  margin: var(--sp-1) 0;
+  font-size: var(--fs-sm);
+}
+.gv-acc {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+}
+.gv-counts {
+  list-style: none;
+  margin: var(--sp-2) 0;
+  padding: 0;
+  display: flex;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  font-size: var(--fs-xs);
+}
+.gv-counts .is-blunder {
+  color: var(--blunder-text);
+}
+.gv-counts .is-mistake {
+  color: var(--mistake-text);
+}
+.gv-counts .is-inaccuracy {
+  color: var(--inaccuracy-text);
+}
+
+/* The estimate's confidence. Low confidence is the common case for a single
+   game, so it is styled as information rather than as a warning — but it is
+   never silent, because a bare number overstates what one game shows. */
+.gv-conf {
+  font-size: var(--fs-xs) !important;
+}
+.gv-conf.is-low {
+  color: var(--text-dim);
+}
+.gv-conf.is-medium,
+.gv-conf.is-high {
+  color: var(--text);
+}
+
+/* --- A.5b error profile ---------------------------------------------- */
+
+.gv-profile {
+  margin: var(--sp-3) 0;
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+}
+.gv-profile-head {
+  margin: 0 0 var(--sp-2) !important;
+}
+.gv-rates {
+  list-style: none;
+  margin: 0 0 var(--sp-2);
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--sp-1) var(--sp-3);
+}
+.gv-rates li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+}
+.gv-rates li span {
+  font-size: var(--fs-xs);
+}

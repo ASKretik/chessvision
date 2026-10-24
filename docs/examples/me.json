@@ -1,0 +1,13 @@
+{
+ "user_id": "aaaaaaaa-0000-0000-0000-00000000000a",
+ "email": "a@example.com",
+ "stats": {
+  "user_id": "aaaaaaaa-0000-0000-0000-00000000000a",
+  "puzzle_rating": 1500,
+  "puzzle_attempts": 3,
+  "puzzles_solved": 2,
+  "games_analysed": 1,
+  "current_streak": 2,
+  "best_streak": 2
+ }
+}

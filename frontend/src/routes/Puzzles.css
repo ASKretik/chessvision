@@ -1,0 +1,132 @@
+.pz {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: var(--sp-4) var(--sp-5) var(--sp-6);
+}
+
+.pz-split {
+  display: grid;
+  gap: var(--sp-5);
+  grid-template-columns: minmax(0, 1fr) minmax(var(--rail-min), var(--rail-max));
+  align-items: start;
+}
+@media (max-width: 999px) {
+  .pz-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.pz-board-col {
+  max-width: var(--board-max);
+}
+
+.pz-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+/* Whose move it is, as a chip carrying the colour it names — the single most
+   important thing to know before touching the board. */
+.pz-turn {
+  flex-grow: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+}
+.pz-turn::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex: 0 0 auto;
+}
+.pz-turn.is-white::before {
+  background: var(--eval-white);
+}
+.pz-turn.is-black::before {
+  background: var(--eval-black);
+  border: 1px solid var(--border);
+}
+
+.pz-loading {
+  padding: var(--sp-5);
+  color: var(--text-dim);
+}
+
+.pz-err {
+  color: var(--blunder-text);
+  font-size: var(--fs-sm);
+}
+
+/* --- rail ------------------------------------------------------------- */
+
+.pz-rail {
+  padding: var(--sp-4);
+}
+.pz-rail h2 {
+  margin: var(--sp-4) 0 var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.pz-rail p {
+  margin: var(--sp-1) 0;
+  font-size: var(--fs-sm);
+}
+
+.pz-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+}
+.pz-rating {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+}
+.pz-themes {
+  min-height: 2.4em;
+}
+
+.pz-line {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: var(--fs-md);
+}
+.pz-line li {
+  display: flex;
+  gap: var(--sp-2);
+  padding: var(--sp-1) 0;
+  border-bottom: 1px solid var(--border);
+}
+.pz-no {
+  color: var(--text-dim);
+  min-width: 2em;
+}
+
+.pz-verdict {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  margin: var(--sp-4) 0 var(--sp-1);
+}
+.pz-verdict.is-solved {
+  color: var(--best-text);
+}
+.pz-verdict.is-failed {
+  color: var(--blunder-text);
+}
+
+.pz-rail .btn-primary {
+  margin-top: var(--sp-3);
+  width: 100%;
+}
+
+.pz-signed {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-sm);
+}

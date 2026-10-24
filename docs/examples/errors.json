@@ -1,0 +1,11 @@
+{
+ "no_source_422": {
+  "detail": "Provide exactly one of lichess_url / chesscom_url / pgn / fen (got none)"
+ },
+ "unknown_job_404": {
+  "detail": "Unknown or expired job"
+ },
+ "unauthenticated_401": {
+  "detail": "Sign-in required"
+ }
+}

@@ -1,0 +1,162 @@
+@import './tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--ground);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Every number in the app: eval, clock, accuracy, rating, move list. Tabular
+ * figures stop digits shifting as the move list scrolls. */
+.num,
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* Keyboard-only focus, never suppressed entirely. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --- the two-column shell both Analyse and Play use ------------------- */
+
+.page {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: var(--sp-5) var(--sp-5) var(--sp-6);
+}
+
+.split {
+  display: grid;
+  gap: var(--sp-5);
+  grid-template-columns: minmax(320px, 1fr) minmax(var(--rail-min), var(--rail-max));
+  align-items: start;
+}
+
+/* One column below 900px. The rail is bounded above because a rail wider
+ * than 440px makes the move list read as a table instead of a list. */
+@media (max-width: 899px) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: 44px;
+  padding: 0 var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 120ms, border-color 120ms, box-shadow 120ms, transform 120ms;
+}
+.btn:hover {
+  background: var(--raised);
+  text-decoration: none;
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn-primary {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--accent-on);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 6px 18px -6px var(--glow);
+}
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+.btn-primary:active {
+  transform: translateY(1px);
+}
+
+.btn-sm {
+  min-height: 36px;
+  padding: 0 var(--sp-3);
+  font-size: var(--fs-sm);
+}
+.btn-lg {
+  min-height: 52px;
+  padding: 0 var(--sp-5);
+  font-size: var(--fs-md);
+}
+.btn-ghost {
+  background: transparent;
+}
+.btn-light {
+  background: #fff;
+  color: #1e1b4b;
+  border-color: transparent;
+}
+.btn-light:hover {
+  background: #eef2ff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

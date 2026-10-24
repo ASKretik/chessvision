@@ -1,0 +1,122 @@
+/* Design tokens. The only place in the codebase that names a colour.
+ *
+ * Every value is checked against WCAG AA at the use it is given.
+ */
+
+/* ChessVision palette: deep ink surfaces with an indigo brand accent.
+ * Ratios in comments are measured against --panel unless stated. */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --ground: #0b0f1a;
+  --panel: #131a2a;
+  --raised: #1b2438;
+  --border: #263049;
+
+  /* Text */
+  --text: #e4e8f1; /* 14.2 */
+  --text-dim: #98a2b8; /* 6.9 */
+
+  /* Accent. --accent is for fills and borders; --accent-text is the brand
+   * colour as text. They are different colours on purpose. */
+  --accent: #5b5bf6;
+  --accent-text: #a5b4fc; /* 8.6 */
+  --accent-on: #ffffff; /* 4.9 on --accent */
+  --accent-hover: #6d6dff;
+  --link: #93a4ff; /* 7.4 */
+  --brand-2: #22d3ee;
+  --glow: rgba(91, 91, 246, 0.35);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.25);
+
+  /* Move classification. Okabe-Ito, so inaccuracy is blue not yellow:
+   * red/orange/yellow would be indistinguishable to a deuteranope and this
+   * is the one colour code the analysis page depends on.
+   * -text needs 4.5:1 (12px label), -fill needs 3:1 (16px glyph). */
+  --blunder-text: #f07878;
+  --blunder-fill: #df5353;
+  --mistake-text: #e69f00;
+  --mistake-fill: #e69f00;
+  --inaccuracy-text: #56b4e9;
+  --inaccuracy-fill: #56b4e9;
+  --best-text: #4ade80;
+  --best-fill: #22a559;
+
+  /* Eval bar */
+  --eval-white: #f0f0f0;
+  --eval-black: #2a3247;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --ground: #f5f6fa;
+  --panel: #ffffff;
+  --raised: #f0f2f8;
+  --border: #e1e5ee;
+
+  --text: #161c2d; /* 17.0 */
+  --text-dim: #5a6378; /* 6.1 */
+
+  --accent: #4f46e5;
+  --accent-text: #4338ca; /* 7.9 */
+  --accent-on: #ffffff; /* 6.3 on --accent */
+  --accent-hover: #4338ca;
+  --link: #4338ca;
+  --brand-2: #0891b2;
+  --glow: rgba(79, 70, 229, 0.18);
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 8px 24px rgba(16, 24, 40, 0.08);
+
+  --blunder-text: #b32d2d;
+  --blunder-fill: #df5353;
+  --mistake-text: #8a5d00;
+  --mistake-fill: #e69f00;
+  --inaccuracy-text: #17688f;
+  --inaccuracy-fill: #56b4e9;
+  --best-text: #15803d;
+  --best-fill: #22a559;
+
+  --eval-white: #ffffff;
+  --eval-black: #2a3247;
+}
+
+/* Board. Identical in both themes — lichess does not re-tint the board. */
+:root {
+  --sq-light: #f0d9b5;
+  --sq-dark: #b58863;
+  --sq-last: rgba(155, 199, 0, 0.41);
+  --sq-sel: rgba(20, 85, 30, 0.5);
+  --sq-dest: rgba(20, 85, 30, 0.3);
+  --sq-premove: rgba(20, 30, 85, 0.4);
+  --arrow: rgba(21, 120, 27, 0.8);
+
+  /* Type */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --fs-xs: 11px;
+  --fs-sm: 13px;
+  --fs-md: 15px;
+  --fs-lg: 17px;
+  --fs-xl: 22px;
+  --fs-2xl: 30px;
+
+  /* Space */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+
+  /* Radius */
+  --radius: 8px;
+  --radius-lg: 14px;
+
+  /* Layout */
+  --header-h: 60px;
+  --rail-min: 380px;
+  --rail-max: 440px;
+  --board-max: 680px;
+  --page-max: 1400px;
+}

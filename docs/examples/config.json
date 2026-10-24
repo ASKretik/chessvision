@@ -1,0 +1,35 @@
+{
+ "env": "development",
+ "version": "0.1.0",
+ "supabase_url": "",
+ "supabase_anon_key": "",
+ "features": {
+  "analysis": true,
+  "move_facts": true,
+  "commentary": false,
+  "rating_estimate": true,
+  "accounts": false,
+  "puzzles": true,
+  "puzzles_dev_sample": false,
+  "local_accounts": true,
+  "bots": true,
+  "dev_user": false
+ },
+ "reasons": {
+  "commentary": "No LLM key is configured, so moves come with facts but no prose. Set LLM_PROVIDER and LLM_API_KEY to turn on written comments.",
+  "accounts": "Supabase is not configured, so there are no accounts and nothing is saved between visits. Set SUPABASE_URL and SUPABASE_ANON_KEY."
+ },
+ "limits": {
+  "rate_limit_per_hour": 20,
+  "max_comments_per_game": 18,
+  "job_ttl_seconds": 3600,
+  "depth_default": 14,
+  "depth_min": 6,
+  "depth_max": 22,
+  "multipv_default": 3,
+  "multipv_max": 5,
+  "max_moves_per_attempt": 40
+ },
+ "llm_provider": null,
+ "llm_model": null
+}

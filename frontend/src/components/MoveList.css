@@ -1,0 +1,112 @@
+.movelist {
+  font-size: var(--fs-md);
+}
+
+/* Fixed number column, then two equal move columns. A grid rather than a
+   table so a comment can break the flow and span the full width. */
+.ml-row {
+  display: grid;
+  grid-template-columns: 2.6em 1fr 1fr;
+  align-items: stretch;
+}
+.ml-row:nth-child(odd) {
+  background: color-mix(in srgb, var(--raised) 40%, transparent);
+}
+
+.ml-no {
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: var(--sp-2);
+}
+
+.ml-cell {
+  min-height: 30px;
+  padding: var(--sp-1) var(--sp-2);
+  text-align: left;
+  font: inherit;
+  font-family: var(--font-mono);
+  color: var(--text);
+  background: none;
+  border: 0;
+  border-left: 2px solid transparent;
+}
+.ml-move {
+  cursor: pointer;
+}
+.ml-move:hover {
+  background: var(--raised);
+}
+
+/* The cursor. A left bar plus a lighter ground, so it reads without relying
+   on colour alone. */
+.ml-move.is-sel {
+  background: var(--raised);
+  border-left-color: var(--accent);
+  font-weight: 700;
+}
+
+.ml-move.is-blunder {
+  color: var(--blunder-text);
+}
+.ml-move.is-mistake {
+  color: var(--mistake-text);
+}
+.ml-move.is-inaccuracy {
+  color: var(--inaccuracy-text);
+}
+
+/* The comment opens under its move, indented past the number column so the
+   move list's rhythm survives. */
+.ml-comment {
+  margin: 0 var(--sp-3) var(--sp-3) 2.6em;
+  padding: var(--sp-3);
+  background: var(--raised);
+  border-radius: var(--radius);
+}
+/* Which move the card is about. Load-bearing once a row can hold two. */
+.ml-about {
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  font-weight: 700;
+}
+.ml-prose {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+.ml-facts {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.ml-train {
+  margin-top: var(--sp-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  min-height: 32px;
+}
+.ml-train:hover {
+  text-decoration: underline;
+}
+
+/* A move the pipeline could not comment on. Muted, because it is not an
+   error the reader caused -- but present, because silence in the move list
+   is indistinguishable from the feature being broken. */
+.ml-gap {
+  margin: 0 var(--sp-3) var(--sp-2) 2.6em;
+  padding: var(--sp-2) var(--sp-3);
+  border-left: 2px solid var(--border);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  line-height: 1.5;
+}

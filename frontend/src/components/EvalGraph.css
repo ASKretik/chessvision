@@ -1,0 +1,51 @@
+/* preserveAspectRatio="none" stretches the viewBox to the rail's width, so
+   every stroke here is in viewBox units and would scale with it. Vector
+   effect keeps the strokes one pixel regardless. */
+.evalgraph {
+  display: block;
+  width: 100%;
+  height: 56px;
+  cursor: pointer;
+}
+
+.eg-bg {
+  fill: var(--ground);
+}
+.eg-mid {
+  stroke: var(--border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.eg-area {
+  fill: var(--accent);
+  fill-opacity: 0.22;
+}
+.eg-line {
+  fill: none;
+  stroke: var(--accent-text);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+}
+.eg-cursor {
+  stroke: var(--text);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.8;
+}
+
+/* The one colour code the page depends on. Okabe-Ito, so inaccuracy is blue
+   rather than yellow — red/orange/yellow are indistinguishable to a
+   deuteranope, and these dots are small. */
+.eg-dot {
+  vector-effect: non-scaling-stroke;
+}
+.eg-dot.is-blunder {
+  fill: var(--blunder-fill);
+}
+.eg-dot.is-mistake {
+  fill: var(--mistake-fill);
+}
+.eg-dot.is-inaccuracy {
+  fill: var(--inaccuracy-fill);
+}

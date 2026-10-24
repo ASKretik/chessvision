@@ -1,0 +1,37 @@
+/* The bar is a two-tone column: black fills from the top, white from the
+   bottom, and the join is the evaluation. Flipping the board flips it with
+   `flex-direction`, so one declaration keeps the two in agreement. */
+.evalbar {
+  width: 14px;
+  flex: 0 0 14px;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: var(--eval-black);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.evalbar.is-flipped {
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+}
+
+.evalbar-white {
+  background: var(--eval-white);
+  width: 100%;
+  transition: height 240ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .evalbar-white {
+    transition: none;
+  }
+}
+
+@media (max-width: 599px) {
+  .evalbar {
+    width: 10px;
+    flex-basis: 10px;
+  }
+}

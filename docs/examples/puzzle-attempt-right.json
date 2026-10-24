@@ -1,0 +1,52 @@
+{
+ "result": {
+  "puzzle_id": "p1",
+  "solved": true,
+  "moves_correct": 2,
+  "moves_required": 2,
+  "checks": [
+   {
+    "index": 0,
+    "submitted": "a2e6",
+    "expected": "a2e6",
+    "correct": true,
+    "opponent_reply": "d7d8",
+    "fen_after": "q2k2nr/1pp1nQpp/3pB3/1P2p3/4P3/B1PP1b2/6PP/5K2 w - - 3 19",
+    "accepted_alternative": false
+   },
+   {
+    "index": 1,
+    "submitted": "f7f8",
+    "expected": "f7f8",
+    "correct": true,
+    "opponent_reply": null,
+    "fen_after": "q2k1Qnr/1pp1n1pp/3pB3/1P2p3/4P3/B1PP1b2/6PP/5K2 b - - 4 19",
+    "accepted_alternative": false
+   }
+  ],
+  "first_wrong_move": null,
+  "expected_instead": null,
+  "reason": null
+ },
+ "rating": {
+  "before": 1468,
+  "after": 1503,
+  "delta": 35,
+  "expected": 0.4541,
+  "k": 64,
+  "attempts_before": 4
+ },
+ "stats": {
+  "user_id": "aaaaaaaa-0000-0000-0000-00000000000a",
+  "puzzle_rating": 1503,
+  "puzzle_attempts": 5,
+  "puzzles_solved": 3,
+  "games_analysed": 1,
+  "current_streak": 1,
+  "best_streak": 2
+ },
+ "solution": [
+  "a2e6",
+  "f7f8"
+ ]
+}

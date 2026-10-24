@@ -1,0 +1,30 @@
+{
+ "used_mb": 190.6,
+ "limit_mb": 512.0,
+ "free_mb": 321.4,
+ "fraction_used": 0.3723,
+ "authoritative": false,
+ "peak_mb": 0.0,
+ "peak_at": null,
+ "peak_observed_mb": 190.6,
+ "peak_observed_source": "partial",
+ "headroom_required_mb": 64,
+ "admits_new_job": true,
+ "rejections": 0,
+ "source": "partial",
+ "detail": {
+  "self_basis": "uss",
+  "children": [],
+  "note": "this process only -- child private memory is not readable on this platform, so the container total is unknown"
+ },
+ "knobs": {
+  "budget_mb": 512,
+  "stockfish_hash_mb": 16,
+  "stockfish_threads": 1,
+  "max_concurrent_jobs": 2,
+  "omp_num_threads": null,
+  "maia2_preload": true,
+  "maia2_loaded": true
+ },
+ "verdict": "unknown: source='partial' cannot see the whole container (child process memory is not readable here). Deploy, drive load with tools/profile_memory.py, then read /ops/memory for the cgroup figure that decides plan.md \u00a78.7."
+}

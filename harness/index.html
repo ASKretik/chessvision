@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChessVision — dev harness</title>
+<!--
+  DEV INSPECTION HARNESS, not Part E.4.
+
+  plan.md E.4 says not to begin frontend implementation until the UI spec
+  lands. This exists only to exercise the backend by hand and see what the
+  models produce. It is deliberately plain: no framework, no build step, no
+  design system, and it will be replaced wholesale by the real frontend.
+
+  Everything it knows about the API comes from docs/api-contract.md.
+-->
+<style>
+  :root {
+    --bg: #15161a; --panel: #1e2027; --line: #2d303a;
+    --ink: #e7e9ee; --dim: #9aa0ae; --accent: #6aa9ff;
+    --best: #7fd18b; --good: #b8c46a; --inacc: #e8c25a;
+    --mistake: #e8954a; --blunder: #e8625a;
+    --light: #e6d7bd; --dark: #a8825c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+  header {
+    padding: 14px 16px; border-bottom: 1px solid var(--line);
+    display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap;
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+  .badge {
+    font-size: 11px; padding: 2px 7px; border-radius: 10px;
+    background: #3a2f1a; color: #e8c25a; border: 1px solid #5a4620;
+  }
+  #features { margin-left: auto; font-size: 12px; color: var(--dim); }
+  #features span { margin-left: 10px; }
+  .on { color: var(--best); } .off { color: var(--dim); text-decoration: line-through; }
+
+  nav { display: flex; gap: 2px; padding: 0 16px; border-bottom: 1px solid var(--line); }
+  nav button {
+    background: none; border: 0; color: var(--dim); padding: 10px 14px;
+    cursor: pointer; font: inherit; border-bottom: 2px solid transparent;
+  }
+  nav button.active { color: var(--ink); border-bottom-color: var(--accent); }
+  nav button:disabled { opacity: .4; cursor: not-allowed; }
+
+  main { padding: 16px; max-width: 1180px; }
+  .tab { display: none; } .tab.active { display: block; }
+
+  .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; padding: 14px; margin-bottom: 14px;
+  }
+  .panel h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em;
+              color: var(--dim); margin: 0 0 10px; font-weight: 600; }
+
+  label { display: block; font-size: 12px; color: var(--dim); margin: 8px 0 3px; }
+  input, select, textarea, button.go {
+    font: inherit; background: #14151a; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; width: 100%;
+  }
+  textarea { min-height: 90px; resize: vertical; font-family: ui-monospace, monospace; font-size: 12px; }
+  button.go {
+    background: var(--accent); color: #0b1220; border: 0; font-weight: 600;
+    cursor: pointer; margin-top: 12px; width: auto; padding: 8px 18px;
+  }
+  button.go:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* board */
+  .board { display: grid; grid-template-columns: repeat(8, 1fr); width: 320px;
+           border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  .board div { aspect-ratio: 1; display: grid; place-items: center;
+               font-size: 26px; line-height: 1; user-select: none; }
+  .board .l { background: var(--light); } .board .d { background: var(--dark); }
+  .board div { color: #111; position: relative; }
+  .board .wp { color: #fff; text-shadow: 0 0 2px #000, 0 1px 2px #0008; }
+  /* interaction */
+  .board.live div { cursor: default; }
+  .board.live div.movable { cursor: grab; }
+  .board div.sel-sq { box-shadow: inset 0 0 0 3px var(--accent); }
+  .board div.dest::after {
+    content: ''; position: absolute; width: 30%; height: 30%;
+    border-radius: 50%; background: #2b6fd455; pointer-events: none;
+  }
+  .board div.dest.cap::after {
+    width: 86%; height: 86%; background: none;
+    border: 3px solid #2b6fd477; border-radius: 50%;
+  }
+  .board div.lastmove { background: #6aa9ff33; }
+  .board div.check { background: #e8625a55; }
+  .boardwrap { position: relative; width: 320px; }
+  .boarderr { margin-top: 6px; font-size: 11px; color: var(--blunder);
+              line-height: 1.4; }
+  .promo {
+    position: absolute; inset: 0; background: #0b0c10e8; display: grid;
+    place-items: center; z-index: 5;
+  }
+  .promo div { display: flex; gap: 6px; }
+  .promo button {
+    font-size: 28px; width: 50px; height: 50px; cursor: pointer;
+    background: var(--light); border: 1px solid var(--line); border-radius: 6px;
+  }
+  .navrow { display: flex; gap: 6px; margin-top: 8px; align-items: center; }
+  .navrow button {
+    font: inherit; background: #2d303a; color: var(--ink); border: 0;
+    border-radius: 5px; padding: 5px 11px; cursor: pointer;
+  }
+  .navrow button:disabled { opacity: .35; cursor: not-allowed; }
+  .navrow .spacer { flex: 1; }
+  .hint { font-size: 11px; color: var(--dim); }
+
+  /* move list */
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th { text-align: left; color: var(--dim); font-weight: 500; font-size: 11px;
+       text-transform: uppercase; letter-spacing: .04em; padding: 4px 6px; }
+  td { padding: 4px 6px; border-top: 1px solid var(--line); }
+  tr.sel td { background: #262a35; }
+  tr.clickable { cursor: pointer; }
+  tr.clickable:hover td { background: #22252e; }
+  .lab { font-size: 11px; padding: 1px 6px; border-radius: 9px; white-space: nowrap; }
+  .lab.best, .lab.excellent { background: #1e3626; color: var(--best); }
+  .lab.good { background: #313620; color: var(--good); }
+  .lab.inaccuracy { background: #3b3218; color: var(--inacc); }
+  .lab.mistake { background: #3d2a16; color: var(--mistake); }
+  .lab.blunder { background: #3d1f1d; color: var(--blunder); }
+  .mono { font-family: ui-monospace, monospace; }
+  .dim { color: var(--dim); }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 10px; }
+  .stat { background: #14151a; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+  .stat b { display: block; font-size: 19px; font-weight: 600; }
+  .stat span { font-size: 11px; color: var(--dim); }
+
+  progress { width: 100%; height: 6px; }
+  #log { font-family: ui-monospace, monospace; font-size: 11px; color: var(--dim);
+         max-height: 120px; overflow: auto; white-space: pre-wrap; }
+  .comment { border-left: 2px solid var(--accent); padding: 2px 0 2px 10px; margin: 8px 0; }
+  .comment .mv { font-weight: 600; }
+  .warn { color: var(--inacc); }
+  .err { color: var(--blunder); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ChessVision</h1>
+  <span class="badge">dev harness — not the real UI</span>
+  <div id="features"></div>
+</header>
+
+<nav>
+  <button data-tab="analyse" class="active">Analyse</button>
+  <button data-tab="puzzles">Puzzles</button>
+  <button data-tab="raw">Raw JSON</button>
+</nav>
+
+<main>
+
+<!-- ───────────────────────── Analyse ───────────────────────── -->
+<section id="tab-analyse" class="tab active">
+  <div class="row">
+    <div class="panel" style="flex:1 1 320px; max-width:420px">
+      <h2>Source</h2>
+      <label>Input type</label>
+      <select id="src">
+        <option value="lichess_url">Lichess URL</option>
+        <option value="pgn" selected>Paste PGN</option>
+        <option value="chesscom_url">Chess.com URL</option>
+        <option value="fen">FEN (single position)</option>
+      </select>
+
+      <div id="f-lichess_url" class="field" hidden>
+        <label>Game URL or id</label>
+        <input id="in-lichess_url" placeholder="https://lichess.org/abcd1234">
+      </div>
+      <div id="f-chesscom_url" class="field" hidden>
+        <label>Game URL</label>
+        <input id="in-chesscom_url" placeholder="https://www.chess.com/game/live/123456789">
+        <label>Username <span class="dim">(required — no get-by-URL endpoint)</span></label>
+        <input id="in-chesscom_username" placeholder="hikaru">
+        <label>Month <span class="dim">(optional, YYYY/MM — skips the archive scan)</span></label>
+        <input id="in-chesscom_month" placeholder="2026/10">
+      </div>
+      <div id="f-pgn" class="field">
+        <label>PGN</label>
+        <textarea id="in-pgn"></textarea>
+      </div>
+      <div id="f-fen" class="field" hidden>
+        <label>FEN</label>
+        <input id="in-fen" class="mono"
+               placeholder="r1bqkb1r/pppp1ppp/2n2n2/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 6 5">
+      </div>
+
+      <label>Engine depth <span class="dim">(higher = slower)</span></label>
+      <input id="depth" type="number" value="12" min="6" max="22">
+      <label><input type="checkbox" id="commentary" checked style="width:auto"> Commentary (Part B)</label>
+      <label><input type="checkbox" id="rating" checked style="width:auto"> Rating estimate (Part A.5)</label>
+      <button class="go" id="run">Analyse</button>
+      <div id="prog" hidden style="margin-top:12px">
+        <progress id="bar" value="0" max="1"></progress>
+        <div id="stage" class="dim" style="font-size:12px"></div>
+      </div>
+    </div>
+
+    <div class="panel" style="flex:0 0 auto">
+      <h2>Position <span class="dim" style="text-transform:none">— click a piece to play a move</span></h2>
+      <div class="boardwrap"><div class="board live" id="board"></div></div>
+      <div class="navrow">
+        <button id="nav-start" title="start">&#124;&#9664;</button>
+        <button id="nav-prev" title="previous">&#9664;</button>
+        <button id="nav-next" title="next">&#9654;</button>
+        <button id="nav-end" title="end">&#9654;&#124;</button>
+        <span class="spacer"></span>
+        <span class="hint" id="nav-label"></span>
+      </div>
+      <div class="navrow" id="explore-row" hidden>
+        <span class="hint warn">exploring a variation</span>
+        <span class="spacer"></span>
+        <button id="nav-back-to-game">back to game</button>
+      </div>
+      <div class="dim mono" id="fen" style="font-size:10px; margin-top:8px; width:320px; word-break:break-all"></div>
+    </div>
+
+    <div class="panel" style="flex:1 1 300px">
+      <h2>Summary</h2>
+      <div id="summary" class="dim">Run an analysis.</div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="panel" style="flex:1 1 300px">
+      <h2>Time analysis (A.4)</h2>
+      <div id="time" class="dim">—</div>
+    </div>
+    <div class="panel" style="flex:1 1 300px">
+      <h2>Facts for the selected move (B.1)</h2>
+      <div id="facts" class="dim">Click a move.</div>
+    </div>
+    <div class="panel" style="flex:1 1 240px">
+      <h2>Event log (SSE)</h2><div id="log"></div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="panel" style="flex:1 1 440px">
+      <h2>Moves <span class="dim" style="text-transform:none">— click a row to see the position</span></h2>
+      <div id="moves" class="dim">—</div>
+    </div>
+    <div class="panel" style="flex:1 1 380px">
+      <h2>Commentary (Part B)</h2>
+      <div id="commentary" class="dim">—</div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────── Puzzles ───────────────────────── -->
+<section id="tab-puzzles" class="tab">
+  <div class="panel" id="puz-gate"></div>
+  <div class="row" id="puz-ui" hidden>
+    <div class="panel" style="flex:0 0 auto">
+      <h2>Puzzle <span class="dim" style="text-transform:none">— play your move on the board</span></h2>
+      <div class="boardwrap"><div class="board live" id="pboard"></div></div>
+      <div class="navrow">
+        <span class="hint" id="pturn"></span>
+        <span class="spacer"></span>
+        <button id="pundo">Undo</button>
+        <button id="pnext">New puzzle</button>
+      </div>
+      <div id="pmeta" class="dim" style="margin-top:8px; font-size:12px"></div>
+    </div>
+    <div class="panel" style="flex:1 1 300px">
+      <h2>Your line</h2>
+      <div id="pline" class="dim mono">—</div>
+      <div id="presult" style="margin-top:12px"></div>
+      <details style="margin-top:14px">
+        <summary class="dim" style="cursor:pointer; font-size:12px">Type moves instead</summary>
+        <label>UCI or SAN, one per line</label>
+        <textarea id="pmoves" placeholder="a2e6&#10;f7f8"></textarea>
+        <button class="go" id="psubmit">Submit typed moves</button>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────── Raw ───────────────────────── -->
+<section id="tab-raw" class="tab">
+  <div class="panel">
+    <h2>Last response</h2>
+    <pre id="raw" class="mono dim" style="font-size:11px; max-height:70vh; overflow:auto">—</pre>
+  </div>
+</section>
+
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+let lastReport = null, lastPuzzle = null;
+
+/* Analyse tab: one interactive board, plus a cursor into the game so the
+   arrows and the move rows drive the same position. Playing a move on the
+   board leaves the game line and enters "explore" mode, which is why the
+   back-to-game button exists -- without it a stray click loses your place. */
+let aBoard = null, pBoard = null;
+let gamePly = 0, exploring = false;
+
+/* ------------------------------------------------------------------
+   Interactive board.
+
+   One component, used by every tab — plan.md E.4 calls this "the single
+   biggest frontend saving available", and it only pays off if it also
+   handles move input.
+
+   It holds no chess rules. Legality, SAN and the resulting position all
+   come from GET /board/moves, so there is exactly one implementation of
+   the rules and the client cannot disagree with the server about what is
+   legal. Playing a move is: look it up, swap in `fen_after`.
+
+   Click a piece to see its destinations, click a destination to play.
+   Promotions are detected by two legal moves sharing from+to, which the
+   board offers as a picker without knowing the promotion rules.
+   ------------------------------------------------------------------ */
+const PIECES = {K:'\u2654',Q:'\u2655',R:'\u2656',B:'\u2657',N:'\u2658',P:'\u2659',
+                k:'\u265A',q:'\u265B',r:'\u265C',b:'\u265D',n:'\u265E',p:'\u265F'};
+const FILES = 'abcdefgh';
+
+class Board {
+  constructor(el, opts = {}) {
+    this.el = el;
+    this.onMove = opts.onMove || null;      // (move, fenAfter) => void
+    this.fen = null;
+    this.legal = [];                         // from /board/moves
+    this.sel = null;                         // selected origin square
+    this.lastMove = null;                    // {from,to}
+    this.inCheck = false;
+    this.interactive = !!opts.interactive;
+    this.pending = null;                     // promotion in progress
+    this.flipped = !!opts.flipped;           // black at the bottom
+    this.locked = false;                     // ignore clicks (awaiting server)
+    this.error = null;                       // why the board is not live
+  }
+
+  /* Puzzles are shown from the solver's side, so this has to be settable. */
+  orient(black) { this.flipped = !!black; this.draw(); }
+
+  /* Show a position. `interactive` boards also fetch what is legal. */
+  async set(fen, opts = {}) {
+    this.fen = fen;
+    this.lastMove = opts.lastMove || null;
+    this.sel = null;
+    this.legal = [];
+    this.inCheck = false;
+    this.draw();
+    if (!this.interactive || !fen) return;
+    /* Without this call the board has no moves and silently stops being
+       clickable, which is indistinguishable from "interactivity is broken".
+       So a failure is reported, not swallowed. */
+    try {
+      const r = await fetch('/board/moves?fen=' + encodeURIComponent(fen));
+      const d = await r.json();
+      if (this.fen !== fen) return;          // a newer position arrived meanwhile
+      if (!r.ok) throw new Error(d.detail || `HTTP ${r.status}`);
+      this.legal = d.legal || [];
+      this.inCheck = !!d.in_check;
+      this.turn = d.turn;
+      this.gameOver = d.is_game_over;
+      this.error = this.legal.length || d.is_game_over ? null
+                 : 'the server returned no legal moves for this position';
+      this.draw();
+    } catch (e) {
+      if (this.fen !== fen) return;
+      this.error = `board not live: ${e.message}`;
+      console.error('GET /board/moves failed', e);
+      this.draw();
+    }
+  }
+
+  movesFrom(sq) { return this.legal.filter(m => m.from === sq); }
+
+  draw() {
+    const el = this.el;
+    el.innerHTML = '';
+    if (!this.fen) return;
+    const rows = this.fen.split(' ')[0].split('/');
+    const dests = this.sel ? this.movesFrom(this.sel) : [];
+    const movable = new Set(this.legal.map(m => m.from));
+    let kingSq = null;
+
+    /* Squares are built in board order, then reversed as one list when
+       flipped -- simpler and less error-prone than inverting the indices. */
+    rows.forEach((row, r) => {
+      let f = 0;
+      for (const ch of row) {
+        if (/\d/.test(ch)) { for (let i = 0; i < +ch; i++) this.cell(r, f++, '', dests, movable); }
+        else {
+          if ((ch === 'k' || ch === 'K') && this.inCheck) {
+            const turnWhite = this.fen.split(' ')[1] === 'w';
+            if ((ch === 'K') === turnWhite) kingSq = FILES[f] + (8 - r);
+          }
+          this.cell(r, f++, ch, dests, movable);
+        }
+      }
+    });
+    if (kingSq) {
+      const node = el.querySelector(`[data-sq="${kingSq}"]`);
+      if (node) node.classList.add('check');
+    }
+    if (this.flipped) {
+      const cells = Array.from(el.children).reverse();
+      cells.forEach(c => el.appendChild(c));
+    }
+    const wrap = el.parentElement;
+    if (wrap) {
+      const old = wrap.querySelector('.boarderr');
+      if (old) old.remove();
+      if (this.error) {
+        const note = document.createElement('div');
+        note.className = 'boarderr';
+        note.textContent = this.error;
+        wrap.appendChild(note);
+      }
+    }
+  }
+
+  cell(r, f, piece, dests, movable) {
+    const sq = FILES[f] + (8 - r);
+    const d = document.createElement('div');
+    d.className = (r + f) % 2 ? 'd' : 'l';
+    d.dataset.sq = sq;
+    if (piece) {
+      d.textContent = PIECES[piece] || '';
+      if (piece === piece.toUpperCase()) d.classList.add('wp');
+    }
+    if (this.lastMove && (sq === this.lastMove.from || sq === this.lastMove.to))
+      d.classList.add('lastmove');
+    if (this.sel === sq) d.classList.add('sel-sq');
+    const dest = dests.find(m => m.to === sq);
+    if (dest) { d.classList.add('dest'); if (piece) d.classList.add('cap'); }
+    if (this.interactive && movable.has(sq)) d.classList.add('movable');
+    if (this.interactive) d.onclick = () => this.click(sq);
+    this.el.appendChild(d);
+  }
+
+  click(sq) {
+    if (this.pending || this.locked) return;
+    // Clicking the selected piece again deselects it, so the dots go away.
+    // Checked before the destination lookup, which is safe because no legal
+    // move has from === to (castling is encoded e1g1, never e1e1).
+    if (this.sel === sq) { this.sel = null; return this.draw(); }
+    if (this.sel) {
+      const options = this.movesFrom(this.sel).filter(m => m.to === sq);
+      if (options.length > 1) return this.askPromotion(options);   // promotion
+      if (options.length === 1) return this.play(options[0]);
+    }
+    // Select a piece that has moves, or clear.
+    this.sel = this.movesFrom(sq).length ? sq : null;
+    this.draw();
+  }
+
+  askPromotion(options) {
+    this.pending = options;
+    const wrap = this.el.parentElement;
+    const white = this.fen.split(' ')[1] === 'w';
+    const pick = document.createElement('div');
+    pick.className = 'promo';
+    pick.innerHTML = '<div>' + options.map(o => {
+      const letter = {queen:'Q', rook:'R', bishop:'B', knight:'N'}[o.promotion];
+      const glyph = PIECES[white ? letter : letter.toLowerCase()];
+      return `<button data-uci="${o.uci}" title="${o.promotion}">${glyph}</button>`;
+    }).join('') + '</div>';
+    wrap.appendChild(pick);
+    pick.querySelectorAll('button').forEach(b => b.onclick = () => {
+      const chosen = options.find(o => o.uci === b.dataset.uci);
+      pick.remove(); this.pending = null;
+      this.play(chosen);
+    });
+  }
+
+  /* Show the move immediately, then hand it to the owner. A handler that
+     needs the server's verdict (puzzles) locks the board, awaits, and then
+     either keeps this position or puts the old one back -- so the click
+     always feels instant even when it turns out to be wrong. */
+  play(move) {
+    const before = this.fen;
+    this.sel = null;
+    this.set(move.fen_after, {lastMove: {from: move.from, to: move.to}});
+    if (this.onMove) this.onMove(move, before);
+  }
+}
+
+/* The two live boards. Both interactive; they differ only in what a move
+   means -- a variation to explore, or an answer to a puzzle. */
+aBoard = new Board($('#board'), {interactive: true, onMove: onExploreMove});
+pBoard = new Board($('#pboard'), {interactive: true, onMove: onPuzzleMove});
+
+function onExploreMove(move) {
+  exploring = true;
+  $('#explore-row').hidden = false;
+  $('#fen').textContent = move.fen_after;
+  $('#nav-label').textContent = `exploring: ${move.san}`;
+}
+
+/* A page this hand-edited gets cached and then blamed for bugs it no longer
+   has. The server sends no-store, and this prints what the page thinks it is
+   so a stale tab is obvious in the console. */
+const BUILD = 'board-interactive-1';
+console.log('harness build', BUILD);
+
+/* ---------- tabs ---------- */
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  $('#tab-' + b.dataset.tab).classList.add('active');
+  if (b.dataset.tab === 'puzzles') initPuzzles();
+});
+
+/* ---------- source switching ---------- */
+$('#src').onchange = () => {
+  const v = $('#src').value;
+  document.querySelectorAll('.field').forEach(f => f.hidden = true);
+  $('#f-' + v).hidden = false;
+};
+$('#src').onchange();
+$('#in-pgn').value = `[Event "Rated blitz"]
+[White "alice"]
+[Black "bob"]
+[Result "1-0"]
+[WhiteElo "1520"]
+[BlackElo "1495"]
+[TimeControl "300+3"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. Ng5 d5 5. exd5 Nxd5 6. Nxf7 Kxf7
+7. Qf3+ Ke6 8. Nc3 Nd4 9. Bxd5+ Kd6 10. Qf7 Be6 11. Bxe6 Nxe6
+12. Ne4+ Kd5 13. c4+ Kxe4 14. Qxe6 1-0`;
+
+/* ---------- feature flags ---------- */
+let FEATURES = {};
+fetch('/config').then(r => r.json()).then(c => {
+  FEATURES = c.features || {};
+  $('#features').innerHTML = Object.entries(FEATURES)
+    .map(([k, v]) => `<span class="${v ? 'on' : 'off'}">${k}</span>`).join('')
+    + (c.llm_model ? `<span class="dim">${c.llm_model}</span>` : '');
+});
+
+/* ---------- analyse ---------- */
+function log(msg, cls) {
+  const d = $('#log');
+  d.innerHTML += `<div class="${cls || ''}">${msg}</div>`;
+  d.scrollTop = d.scrollHeight;
+}
+
+$('#run').onclick = async () => {
+  const v = $('#src').value;
+  const body = {
+    depth: +$('#depth').value,
+    commentary: $('#commentary').checked,
+    estimate_rating: $('#rating').checked,
+  };
+  body[v] = $('#in-' + v).value.trim();
+  if (!body[v]) { alert('Enter a ' + v); return; }
+  if (v === 'chesscom_url') {
+    body.chesscom_username = $('#in-chesscom_username').value.trim();
+    const m = $('#in-chesscom_month').value.trim();
+    if (m) body.chesscom_month = m;
+  }
+
+  $('#run').disabled = true;
+  $('#log').innerHTML = ''; $('#prog').hidden = false;
+  $('#summary').textContent = 'working…';
+  $('#moves').textContent = '—'; $('#commentary').textContent = '—';
+  $('#time').textContent = '—'; $('#facts').textContent = 'Click a move.';
+
+  let res;
+  try {
+    res = await fetch('/analyse', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+  } catch (e) { log('network error: ' + e, 'err'); $('#run').disabled = false; return; }
+
+  const data = await res.json();
+  if (!res.ok) {
+    log(`${res.status}: ${data.detail || JSON.stringify(data)}`, 'err');
+    $('#summary').innerHTML = `<span class="err">${res.status} — ${data.detail || 'failed'}</span>`;
+    $('#run').disabled = false; $('#prog').hidden = true; return;
+  }
+  log(`job ${data.job_id} accepted`);
+
+  // SSE: the contract says `analysis` arrives before commentary, so render early.
+  const es = new EventSource(data.events);
+  ['state', 'progress', 'analysis', 'comments', 'result', 'error'].forEach(name =>
+    es.addEventListener(name, ev => {
+      const d = JSON.parse(ev.data);
+      if (name === 'progress') {
+        $('#bar').value = d.progress || 0;
+        $('#stage').textContent = d.stage || '';
+        log(`progress ${d.stage} ${Math.round((d.progress || 0) * 100)}%`);
+        if (d.partial && d.partial.comments) renderComments(d.partial.comments);
+      } else if (name === 'analysis') {
+        log('analysis ready — rendering before commentary');
+        render(d);
+      } else if (name === 'comments') {
+        renderComments(d.comments || []);
+      } else if (name === 'result') {
+        log('done'); render(d); es.close();
+        $('#run').disabled = false; $('#prog').hidden = true;
+      } else if (name === 'error') {
+        log('error: ' + d.error, 'err');
+        $('#summary').innerHTML = `<span class="err">${d.error}</span>`;
+        es.close(); $('#run').disabled = false; $('#prog').hidden = true;
+      } else {
+        log(`state ${d.state || ''} ${d.stage || ''}`);
+      }
+    }));
+  es.onerror = () => { es.close(); $('#run').disabled = false; };
+};
+
+function render(rep) {
+  lastReport = rep;
+  $('#raw').textContent = JSON.stringify(rep, null, 1);
+  if (rep.kind === 'position') return renderPosition(rep);
+
+  const w = rep.white, b = rep.black;
+  const est = p => {
+    const r = p.rating_estimate || {};
+    if (!r.available) return `<span class="dim" title="${r.reason || ''}">n/a</span>`;
+    // `elo` is a 100-point estimate for an interior peak, but a BOUND when
+    // the peak is the model's top or bottom bucket — render those as "2000+"
+    // / "1100-" rather than as a point estimate.
+    const m = r.elo_method;
+    const shown = m === 'floor' ? `${r.elo}+` : m === 'ceiling' ? `${r.elo}-` : `${r.elo}`;
+    const title = m === 'floor'
+      ? "lower bound: the model has no bucket above this, and the curve's slope was tested as a predictor and explained nothing (R²=0.0007)"
+      : m === 'ceiling' ? 'upper bound: no bucket below this'
+      : 'interpolated between buckets';
+    // The band is the raw argmax bucket; `elo` comes from the shape of the
+    // whole curve and is then snapped to a 100-point grid, so it can land one
+    // step outside the band. Labelling it "argmax" stops that reading as a
+    // contradiction.
+    return `<b title="${title}">${shown}</b>` +
+           ` <span class="dim" title="the single most likely bucket; the` +
+           ` estimate refines it and may round just outside">argmax ${r.band}</span>`;
+  };
+  $('#summary').innerHTML = `
+    <div class="stats">
+      <div class="stat"><b>${w.accuracy ?? '–'}%</b><span>${w.name || 'White'} acc</span></div>
+      <div class="stat"><b>${b.accuracy ?? '–'}%</b><span>${b.name || 'Black'} acc</span></div>
+      <div class="stat"><b>${w.acpl ?? '–'}</b><span>W ACPL</span></div>
+      <div class="stat"><b>${b.acpl ?? '–'}</b><span>B ACPL</span></div>
+    </div>
+    <table style="margin-top:12px">
+      <tr><th></th><th>${w.name || 'White'}</th><th>${b.name || 'Black'}</th></tr>
+      <tr><td class="dim">blunders</td><td>${w.blunders}</td><td>${b.blunders}</td></tr>
+      <tr><td class="dim">mistakes</td><td>${w.mistakes}</td><td>${b.mistakes}</td></tr>
+      <tr><td class="dim">inaccuracies</td><td>${w.inaccuracies}</td><td>${b.inaccuracies}</td></tr>
+      <tr><td class="dim">weakest phase</td><td>${w.weakest_phase || '–'}</td><td>${b.weakest_phase || '–'}</td></tr>
+      <tr><td class="dim">est. rating</td><td>${est(w)}</td><td>${est(b)}</td></tr>
+    </table>
+    <div class="dim" style="margin-top:10px; font-size:12px">
+      ${rep.opening.eco || ''} ${rep.opening.name || ''}<br>
+      left book: move ${rep.opening.left_book_move_number ?? '–'}
+      (${rep.opening.left_book_move || '–'})<br>
+      ${rep.meta.plies} plies · depth ${rep.meta.depth} · ${rep.meta.elapsed_seconds}s
+      ${rep.time_control.time_analysis_enabled ? '' : '<br><span class="warn">no clock data — time analysis off</span>'}
+    </div>`;
+
+  // Move table. cp is White-POV per the contract, so show it as such.
+  const rows = rep.moves.map(m => `
+    <tr class="clickable" data-fen="${m.fen_before}" data-ply="${m.ply}">
+      <td class="dim mono">${m.move_number}${m.color === 'white' ? '.' : '…'}</td>
+      <td class="mono">${m.san}</td>
+      <td><span class="lab ${m.label}">${m.label}</span></td>
+      <td class="dim mono">${(m.cp_after / 100).toFixed(2)}</td>
+      <td class="dim">${m.win_drop > 0.05 ? '-' + m.win_drop.toFixed(1) : ''}</td>
+      <td class="dim">${m.time_spent != null ? m.time_spent + 's' : ''}
+          ${m.time_flag ? `<span class="warn">${m.time_flag}</span>` : ''}</td>
+      <td class="dim">${m.only_move ? 'only move' : ''}${m.mate_status_change ? ' ' + m.mate_status_change : ''}</td>
+    </tr>`).join('');
+  $('#moves').innerHTML = `<table>
+    <tr><th>#</th><th>move</th><th>label</th><th>eval</th><th>drop</th><th>time</th><th></th></tr>
+    ${rows}</table>`;
+  document.querySelectorAll('#moves tr.clickable').forEach(tr => tr.onclick = () =>
+    gotoPly(+tr.dataset.ply - 1));
+  if (rep.moves.length) gotoPly(0);
+  renderTime(rep);
+  if (rep.commentary) renderCommentary(rep.commentary);
+}
+
+function renderTime(rep) {
+  if (!rep.time_control.time_analysis_enabled) {
+    $('#time').innerHTML = `<span class="warn">Off for this game.</span>
+      <div class="dim" style="margin-top:6px">A.4 needs both %clk comments and a
+      parseable TimeControl header. One without the other is reported as
+      disabled rather than as zeroes.</div>`;
+    return;
+  }
+  const side = s => {
+    const t = rep[s].time, nm = rep[s].name || s;
+    const moment = m => `<tr><td class="dim mono">${m.move_number}${s === 'white' ? '.' : '…'}</td>
+      <td class="mono">${m.san}</td><td>${m.seconds}s</td>
+      <td class="dim">×${m.ratio}</td>
+      <td class="dim">cx ${m.complexity_band}${m.only_move ? ' · only move' : ''}</td></tr>`;
+    return `<div style="margin-bottom:12px"><b>${nm}</b>
+      <div class="stats" style="margin:6px 0">
+        <div class="stat"><b>${t.total_seconds_used}s</b><span>used</span></div>
+        <div class="stat"><b>${t.median_seconds}s</b><span>median/move</span></div>
+        <div class="stat"><b>${t.seconds_wasted}s</b><span>wasted</span></div>
+        <div class="stat"><b>${t.rushed_count}</b><span>rushed</span></div>
+      </div>
+      ${t.top_wasted.length ? `<div class="dim" style="font-size:11px">too long on simple positions</div>
+        <table>${t.top_wasted.map(moment).join('')}</table>` : ''}
+      ${t.top_rushed.length ? `<div class="dim" style="font-size:11px;margin-top:6px">too fast in complex positions</div>
+        <table>${t.top_rushed.map(moment).join('')}</table>` : ''}
+    </div>`;
+  };
+  $('#time').innerHTML = side('white') + side('black')
+    + `<div class="dim" style="font-size:11px">expected ${rep.time_control.expected_per_move}s/move
+       (base/40 + increment)</div>`;
+}
+
+/* B.1 facts for one ply — these exist with or without an LLM key. */
+function renderFacts(ply) {
+  const c = lastReport && lastReport.commentary;
+  const f = c && c.facts && c.facts.moves.find(m => m.ply === ply);
+  if (!f) { $('#facts').innerHTML = '<span class="dim">No facts (commentary was off).</span>'; return; }
+  const list = (label, arr) => arr && arr.length
+    ? `<div><span class="dim">${label}</span> ${arr.map(h =>
+        `<span class="mono">${h.color} ${h.piece}@${h.square}</span>`).join(', ')}</div>` : '';
+  const motifs = (f.motifs || []).map(m => {
+    const parts = Object.entries(m).filter(([k]) => k !== 'motif' && k !== 'benefits')
+      .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`);
+    return `<div style="margin:4px 0"><span class="lab good">${m.motif}</span>
+      <span class="dim" style="font-size:11px">benefits ${m.benefits || '–'}</span>
+      <div class="dim mono" style="font-size:11px">${parts.join(' · ')}</div></div>`;
+  }).join('');
+  $('#facts').innerHTML = `
+    <div class="mono" style="margin-bottom:6px">${f.move_number}${f.color === 'white' ? '.' : '…'} ${f.san}
+      <span class="lab ${f.label}">${f.label}</span></div>
+    <div class="dim" style="font-size:12px">
+      ${f.is_capture ? `takes ${f.captured_piece} · ` : ''}material ${f.material_delta >= 0 ? '+' : ''}${f.material_delta}
+      · king pressure ${f.king_pressure_change >= 0 ? '+' : ''}${f.king_pressure_change}
+      ${f.in_book ? ' · in book' : ''}${f.only_move ? ' · only move' : ''}
+    </div>
+    ${list('left loose:', f.newly_hanging)}
+    ${list('their loose pieces:', f.opponent_hanging)}
+    ${motifs || '<div class="dim" style="font-size:11px">no motifs detected</div>'}
+    ${f.best_move ? `<div class="dim" style="margin-top:6px">engine preferred
+      <span class="mono">${f.best_move}</span> · ${(f.best_pv || []).join(' ')}</div>` : ''}`;
+}
+
+/* Position shown at game index `i` (0 = before the first move). Going past
+   the last move shows the final position, which the report does not carry a
+   FEN for -- so it is taken from the last move's fen_after if available, or
+   the engine's own last position. */
+function gotoPly(i) {
+  const moves = (lastReport && lastReport.moves) || [];
+  if (!moves.length) return;
+  gamePly = Math.max(0, Math.min(i, moves.length));
+  exploring = false;
+  $('#explore-row').hidden = true;
+
+  const atEnd = gamePly >= moves.length;
+  const m = atEnd ? moves[moves.length - 1] : moves[gamePly];
+  const fen = atEnd ? (m.fen_after || m.fen_before) : m.fen_before;
+  const prev = gamePly > 0 ? moves[gamePly - 1] : null;
+
+  aBoard.set(fen, prev ? {lastMove: {from: prev.uci.slice(0,2), to: prev.uci.slice(2,4)}} : {});
+  $('#fen').textContent = fen;
+  $('#nav-label').textContent = atEnd
+    ? `end of game (${moves.length} plies)`
+    : `${m.move_number}${m.color === 'white' ? '.' : '…'} ${m.san} — to play`;
+  document.querySelectorAll('#moves tr').forEach(x => x.classList.remove('sel'));
+  const row = document.querySelector(`#moves tr[data-ply="${m.ply}"]`);
+  if (row && !atEnd) { row.classList.add('sel'); }
+  renderFacts(m.ply);
+  $('#nav-prev').disabled = $('#nav-start').disabled = gamePly === 0;
+  $('#nav-next').disabled = $('#nav-end').disabled = atEnd;
+}
+
+$('#nav-start').onclick = () => gotoPly(0);
+$('#nav-prev').onclick  = () => gotoPly(gamePly - 1);
+$('#nav-next').onclick  = () => gotoPly(gamePly + 1);
+$('#nav-end').onclick   = () => gotoPly(((lastReport && lastReport.moves) || []).length);
+$('#nav-back-to-game').onclick = () => gotoPly(gamePly);
+
+/* Arrow keys, because clicking tiny buttons to step a game is miserable. */
+document.addEventListener('keydown', ev => {
+  if (!$('#tab-analyse').classList.contains('active')) return;
+  if (ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA') return;
+  if (ev.key === 'ArrowLeft') { gotoPly(gamePly - 1); ev.preventDefault(); }
+  if (ev.key === 'ArrowRight') { gotoPly(gamePly + 1); ev.preventDefault(); }
+});
+
+function renderPosition(rep) {
+  aBoard.set(rep.fen);
+  $('#fen').textContent = rep.fen;
+  $('#nav-label').textContent = 'single position — play a move to explore';
+  ['#nav-start','#nav-prev','#nav-next','#nav-end'].forEach(id => $(id).disabled = true);
+  $('#summary').innerHTML = `
+    <div class="stats">
+      <div class="stat"><b>${(rep.eval_cp_white / 100).toFixed(2)}</b><span>eval (White)</span></div>
+      <div class="stat"><b>${rep.win_percent_white}%</b><span>White win%</span></div>
+      <div class="stat"><b>${rep.legal_moves}</b><span>legal moves</span></div>
+    </div>
+    <div class="dim" style="margin-top:10px">${rep.turn} to move · ${rep.phase}
+      ${rep.opening.name ? '· ' + rep.opening.name : ''}</div>`;
+  $('#moves').innerHTML = `<table>
+    <tr><th>#</th><th>move</th><th>eval</th><th>line</th></tr>
+    ${rep.lines.map(l => `<tr><td class="dim">${l.rank}</td><td class="mono">${l.move}</td>
+      <td class="dim mono">${(l.cp_white / 100).toFixed(2)}</td>
+      <td class="dim mono">${l.pv.join(' ')}</td></tr>`).join('')}</table>
+    <div class="dim" style="margin-top:10px; font-size:12px">
+      Not applicable to a single position:<br>${rep.unavailable.join('<br>')}</div>`;
+  $('#commentary').innerHTML = '<span class="dim">Commentary applies to games, not single positions.</span>';
+}
+
+function renderCommentary(c) {
+  if (!c.available) {
+    const facts = c.facts ? `<br><br>B.1 facts are still present for
+      ${c.facts.moves.length} moves (material, hanging pieces, motifs, king safety)
+      — they need no API key.` : '';
+    $('#commentary').innerHTML =
+      `<span class="warn">Commentary unavailable</span><br><span class="dim">${c.reason || ''}${facts}</span>`;
+    return;
+  }
+  let html = '';
+  if (c.narrative) {
+    html += `<div style="margin-bottom:12px">${c.narrative.arc}</div>`;
+    html += `<div class="dim" style="font-size:12px">
+      <b>White:</b> ${c.narrative.white_weakness}<br>
+      <b>Black:</b> ${c.narrative.black_weakness}</div><hr style="border-color:var(--line)">`;
+  }
+  html += (c.comments || []).map(cm => commentHtml(cm)).join('');
+  const u = c.usage || {};
+  if (u.rejected && u.rejected.length)
+    html += `<div class="dim" style="font-size:11px;margin-top:10px">
+      ${u.rejected.length} comment(s) withheld by fact-validation</div>`;
+  $('#commentary').innerHTML = html;
+}
+function commentHtml(cm) {
+  const m = lastReport && lastReport.moves.find(x => x.ply === cm.ply);
+  const label = m ? `${m.move_number}${m.color === 'white' ? '.' : '…'} ${m.san}` : `ply ${cm.ply}`;
+  return `<div class="comment"><span class="mv mono">${label}</span>
+    ${cm.cached ? '<span class="dim">(cached)</span>' : ''}<br>${cm.comment}</div>`;
+}
+function renderComments(list) {
+  if (!list.length) return;
+  const box = $('#commentary');
+  if (box.classList.contains('dim')) { box.classList.remove('dim'); box.innerHTML = ''; }
+  box.innerHTML += list.map(commentHtml).join('');
+}
+
+/* ---------- puzzles ---------- */
+let TOKEN = null;
+/* The line the player has clicked out, and the position each move was made
+   from, so Undo can go back without replaying anything. */
+let pLine = [], pFens = [], pDone = false;
+function initPuzzles() {
+  const gate = $('#puz-gate');
+  if (!FEATURES.puzzles) {
+    gate.innerHTML = `<h2>Puzzles</h2>
+      <span class="warn">Not available.</span>
+      <div class="dim" style="margin-top:8px">
+        Puzzles need a Supabase connection and a seeded puzzle table:
+        <ol>
+          <li>apply <span class="mono">migrations/001_init.sql</span></li>
+          <li>build + load a subset with <span class="mono">tools/build_puzzle_subset.py</span></li>
+          <li>set SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_KEY in .env</li>
+        </ol>
+        The endpoints themselves are implemented and tested (68/68) — see
+        <span class="mono">tests/test_accounts.py</span>.
+      </div>`;
+    $('#puz-ui').hidden = true;
+    return;
+  }
+  if (FEATURES.puzzles_dev_sample) {
+    gate.innerHTML = `<h2>Puzzles <span class="badge">local dev sample</span></h2>
+      <div class="dim">No database configured, so puzzles come from a small
+      Stockfish-verified sample and your rating lives in server memory only.
+      Validation and the Elo update are the real Part C code — only
+      persistence is swapped. Seed the full set to switch over.</div>`;
+    $('#puz-ui').hidden = false;
+    nextPuzzle();
+    return;
+  }
+  gate.innerHTML = `<h2>Auth</h2>
+    <label>Supabase access token (JWT)</label>
+    <input id="tok" placeholder="paste a token from Supabase Auth">
+    <button class="go" onclick="TOKEN=$('#tok').value.trim(); nextPuzzle()">Use token</button>`;
+  $('#puz-ui').hidden = false;
+}
+async function api(path, opts = {}) {
+  opts.headers = Object.assign({'Content-Type': 'application/json'},
+                               TOKEN ? {Authorization: 'Bearer ' + TOKEN} : {}, opts.headers);
+  const r = await fetch(path, opts);
+  const d = await r.json();
+  $('#raw').textContent = JSON.stringify(d, null, 1);
+  if (!r.ok) throw new Error(d.detail || r.status);
+  return d;
+}
+async function nextPuzzle() {
+  try {
+    const d = await api('/puzzles/next');
+    lastPuzzle = d.puzzle;
+    pLine = []; pFens = [d.puzzle.fen]; pDone = false;
+    pBoard.flipped = d.puzzle.side_to_move === 'black';
+    pBoard.locked = false;
+    await pBoard.set(d.puzzle.fen);
+    $('#pmeta').innerHTML = `${d.puzzle.side_to_move} to move ·
+      rating ${d.puzzle.rating} · ${d.puzzle.moves_required} move(s) ·
+      ${d.puzzle.themes.join(', ')}<br>
+      <span class="dim">your rating ${d.your_rating}, window ${d.rating_window.join('–')}</span>`;
+    $('#presult').innerHTML = ''; $('#pmoves').value = '';
+    renderLine();
+  } catch (e) { $('#pmeta').innerHTML = `<span class="err">${e.message}</span>`; }
+}
+function renderLine() {
+  const need = lastPuzzle ? lastPuzzle.moves_required : 0;
+  $('#pline').innerHTML = pLine.length
+    ? pLine.map(e => e.reply_san
+        ? `${e.san} <span class="dim">${e.reply_san}</span>`
+        : `<b>${e.san}</b>`).join('  ')
+    : '—';
+  $('#pline').classList.toggle('dim', !pLine.length);
+  $('#pundo').disabled = !pLine.length || pDone;
+  $('#pturn').textContent = pDone ? 'finished'
+    : `your move ${pLine.length + 1} of ${need}`;
+}
+
+/* One clicked move: the server says whether it is right, and supplies the
+   opponent's answer (it is inside the hidden solution, so only it can).
+   When the line is complete -- or as soon as a move is wrong -- the attempt
+   goes to /attempt, which is the call that moves the rating. */
+async function onPuzzleMove(move, fenBefore) {
+  if (!lastPuzzle || pDone) return;
+  pBoard.locked = true;
+  const line = pLine.map(e => e.uci).concat([move.uci]);
+  try {
+    const d = await api(`/puzzles/${lastPuzzle.id}/step`,
+      {method: 'POST', body: JSON.stringify({moves: line})});
+
+    if (!d.correct) {
+      // Leave the wrong move on the board and let /attempt explain it.
+      pLine.push({uci: move.uci, san: move.san});
+      pDone = true;
+      renderLine();
+      return submitAttempt();
+    }
+
+    const entry = {uci: move.uci, san: move.san};
+    if (d.opponent_reply) {
+      // Resolve the reply through the same endpoint the board uses, so the
+      // SAN shown is the server's and not something built here.
+      const after = await fetch('/board/moves?fen=' + encodeURIComponent(move.fen_after));
+      const info = await after.json();
+      const rep = (info.legal || []).find(m => m.uci === d.opponent_reply);
+      entry.reply_san = rep ? rep.san : d.opponent_reply;
+      await pBoard.set(d.fen_after || (rep && rep.fen_after) || move.fen_after,
+                       rep ? {lastMove: {from: rep.from, to: rep.to}} : {});
+    }
+    pLine.push(entry);
+    pFens.push(pBoard.fen);
+
+    if (d.complete) { pDone = true; renderLine(); return submitAttempt(); }
+    renderLine();
+  } catch (e) {
+    $('#presult').innerHTML = `<span class="err">${e.message}</span>`;
+    await pBoard.set(fenBefore);
+  } finally {
+    if (!pDone) pBoard.locked = false;
+  }
+}
+
+$('#pundo').onclick = async () => {
+  if (!pLine.length || pDone) return;
+  pLine.pop(); pFens.pop();
+  await pBoard.set(pFens[pFens.length - 1]);
+  renderLine();
+};
+
+async function submitAttempt(moves) {
+  const line = moves || pLine.map(e => e.uci);
+  pDone = true; pBoard.locked = true;
+  renderLine();
+  try {
+    const d = await api(`/puzzles/${lastPuzzle.id}/attempt`,
+      {method: 'POST', body: JSON.stringify({moves: line})});
+    const r = d.result, rt = d.rating;
+    $('#presult').innerHTML = `
+      <div class="${r.solved ? '' : 'warn'}" style="font-weight:600">
+        ${r.solved ? 'Solved' : 'Not solved'} — ${r.moves_correct}/${r.moves_required}</div>
+      ${r.expected_instead ? `<div class="dim">expected: <span class="mono">${r.expected_instead}</span></div>` : ''}
+      ${r.reason ? `<div class="dim">${r.reason}</div>` : ''}
+      <div style="margin-top:8px">rating ${rt.before} → <b>${rt.after}</b>
+        (${rt.delta >= 0 ? '+' : ''}${rt.delta}) <span class="dim">k=${rt.k}</span></div>
+      ${d.solution ? `<div class="dim mono" style="margin-top:6px">solution: ${d.solution.join(' ')}</div>` : ''}
+      ${d.stats ? `<div class="dim" style="font-size:11px;margin-top:8px">
+        ${d.stats.puzzles_solved}/${d.stats.puzzle_attempts} solved ·
+        streak ${d.stats.current_streak} (best ${d.stats.best_streak})</div>` : ''}
+      <div style="margin-top:10px"><button class="go" onclick="nextPuzzle()">Next puzzle</button></div>`;
+  } catch (e) { $('#presult').innerHTML = `<span class="err">${e.message}</span>`; }
+}
+
+$('#pnext').onclick = nextPuzzle;
+$('#psubmit').onclick = () => {
+  if (!lastPuzzle) return;
+  const moves = $('#pmoves').value.split('\n').map(s => s.trim()).filter(Boolean);
+  if (moves.length) submitAttempt(moves);
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+ "analyses": [
+  {
+   "id": "an-a",
+   "source_type": "pgn",
+   "source_ref": "A-owned",
+   "created_at": "2026-10-01T00:00:00Z"
+  }
+ ],
+ "limit": 20,
+ "offset": 0
+}

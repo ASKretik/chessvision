@@ -1,0 +1,97 @@
+{
+ "job_id": "c38a84ab35bd4b6797aec4283d089034",
+ "state": "done",
+ "progress": 1.0,
+ "stage": "done",
+ "created_at": 1791979613.376565,
+ "finished_at": 1791979613.627583,
+ "error": null,
+ "result": {
+  "kind": "position",
+  "fen": "r1bqkb1r/pppp1ppp/2n2n2/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 6 5",
+  "turn": "white",
+  "legal_moves": 32,
+  "terminal": false,
+  "outcome": null,
+  "eval_cp_white": 24,
+  "win_percent_white": 52.21,
+  "lines": [
+   {
+    "rank": 1,
+    "move": "O-O",
+    "uci": "e1g1",
+    "cp_white": 24,
+    "mate_in": null,
+    "win_percent_mover": 52.21,
+    "pv": [
+     "O-O",
+     "Nxe4",
+     "Re1",
+     "Nd6",
+     "Nxe5",
+     "Be7"
+    ]
+   },
+   {
+    "rank": 2,
+    "move": "d3",
+    "uci": "d2d3",
+    "cp_white": 22,
+    "mate_in": null,
+    "win_percent_mover": 52.02,
+    "pv": [
+     "d3",
+     "Bd6",
+     "O-O",
+     "a6",
+     "Ba4",
+     "b5"
+    ]
+   },
+   {
+    "rank": 3,
+    "move": "Nc3",
+    "uci": "b1c3",
+    "cp_white": 13,
+    "mate_in": null,
+    "win_percent_mover": 51.2,
+    "pv": [
+     "Nc3",
+     "Bd6",
+     "O-O",
+     "O-O",
+     "Re1",
+     "a6"
+    ]
+   }
+  ],
+  "complexity": {
+   "score": 0.142,
+   "near_best": 3,
+   "spread_cp": 11,
+   "legal_moves": 32,
+   "only_move": false,
+   "band": "low"
+  },
+  "phase": "opening",
+  "opening": {
+   "eco": "C65",
+   "name": "Ruy Lopez: Berlin Defense"
+  },
+  "unavailable": [
+   "time_analysis: a FEN has no clock data",
+   "accuracy: no move was played from this position",
+   "rating_estimate: one position carries no rating signal",
+   "phase_aggregates: no game history"
+  ],
+  "meta": {
+   "depth": 10,
+   "engine_cache": {
+    "cache_entries": 1,
+    "hits": 0,
+    "misses": 1,
+    "hit_rate": 0.0
+   }
+  }
+ }
+}

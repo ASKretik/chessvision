@@ -1,0 +1,18 @@
+# Production deps. Deliberately NOT here:
+#   torch        -- A.5 converts Maia-2 to ONNX offline; the image ships
+#                   onnxruntime only. Torch alone would blow the 512 MB budget.
+#   supabase     -- plain httpx against PostgREST is enough for C.2's needs.
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+httpx==0.28.1
+chess==1.11.2
+onnxruntime==1.20.1
+numpy==2.2.1
+zstandard==0.23.0        # C.3: lichess puzzle dump is .csv.zst
+psutil==6.1.1            # E.3: per-process memory when no cgroup (local dev)
+# B.2/B.3 commentary providers. Both imported lazily, so the app starts and
+# serves B.1's deterministic facts with neither installed and no key set.
+# LLM_PROVIDER picks one; you only need the package for the one you use.
+groq==1.7.0              # free tier, default provider
+anthropic==1.11.0        # metered, higher quality

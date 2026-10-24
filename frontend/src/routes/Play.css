@@ -1,0 +1,123 @@
+.play {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: var(--sp-5);
+}
+.play h1 {
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-xl);
+}
+.play-lead {
+  margin: 0 0 var(--sp-4);
+  color: var(--text-dim);
+  max-width: 70ch;
+}
+.play-err {
+  color: var(--blunder-text);
+  font-size: var(--fs-sm);
+}
+
+.play-bots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.play-bot {
+  padding: var(--sp-4);
+  height: 100%;
+  display: grid;
+  gap: var(--sp-2);
+  align-content: start;
+}
+.play-bot h2 {
+  margin: 0;
+  font-size: var(--fs-md);
+}
+.play-bot p {
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+.play-colours {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+/* --- live game -------------------------------------------------------- */
+
+.play-live {
+  display: grid;
+  gap: var(--sp-5);
+  grid-template-columns: minmax(0, 1fr) minmax(var(--rail-min), var(--rail-max));
+  align-items: start;
+}
+@media (max-width: 999px) {
+  .play-live {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.play-board {
+  max-width: var(--board-max);
+}
+.play-who {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 32px;
+  font-size: var(--fs-sm);
+}
+.play-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+}
+.play-dot.is-white {
+  background: var(--eval-white);
+}
+.play-dot.is-black {
+  background: var(--eval-black);
+  border: 1px solid var(--border);
+}
+.play-controls {
+  display: flex;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.play-rail {
+  padding: var(--sp-4);
+}
+.play-rail h2 {
+  margin: var(--sp-4) 0 var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.play-result {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--blunder-text);
+}
+.play-result.is-win {
+  color: var(--best-text);
+}
+.play-moves {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 50vh;
+  overflow: auto;
+}
+.play-moves li {
+  display: grid;
+  grid-template-columns: 2.5em 1fr 1fr;
+  gap: var(--sp-2);
+  padding: 2px 0;
+  font-size: var(--fs-sm);
+}

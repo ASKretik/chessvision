@@ -1,0 +1,1405 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "ChessVision API",
+  "description": "Analysis backend. Part E.1 skeleton; analysis core in partA.py.",
+  "version": "0.1.0"
+ },
+ "paths": {
+  "/health": {
+   "get": {
+    "tags": [
+     "ops"
+    ],
+    "summary": "Health",
+    "operationId": "health_health_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Health Health Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/ready": {
+   "get": {
+    "tags": [
+     "ops"
+    ],
+    "summary": "Ready",
+    "operationId": "ready_ready_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Ready Ready Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/ops/memory": {
+   "get": {
+    "tags": [
+     "ops"
+    ],
+    "summary": "Ops Memory",
+    "description": "E.3 memory report: current and peak usage against the binding limit,\nthe knobs it was measured under, and a verdict on plan.md \u00a78.7\n(Render free vs. Starter).\n\nDrive load with tools/profile_memory.py and read this afterwards.",
+    "operationId": "ops_memory_ops_memory_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Ops Memory Ops Memory Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/config": {
+   "get": {
+    "tags": [
+     "ops"
+    ],
+    "summary": "Public Config",
+    "description": "Client-safe config. Never add a service key or the LLM key here.",
+    "operationId": "public_config_config_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Public Config Config Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/analyse": {
+   "post": {
+    "tags": [
+     "analysis"
+    ],
+    "summary": "Post Analyse",
+    "description": "Accept an analysis job and return immediately with its id.",
+    "operationId": "post_analyse_analyse_post",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AnalyseRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AnalyseAccepted"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/jobs/{job_id}": {
+   "get": {
+    "tags": [
+     "analysis"
+    ],
+    "summary": "Get Job",
+    "operationId": "get_job_jobs__job_id__get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Get Job Jobs  Job Id  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/jobs/{job_id}/events": {
+   "get": {
+    "tags": [
+     "analysis"
+    ],
+    "summary": "Job Events",
+    "description": "Server-Sent Events: partial results stream in as they are produced\n(E.2). Past events are replayed first, so attaching late is safe.\n\nReadable with the job id alone -- see `_owned_job`. EventSource cannot\ncarry a bearer token, and without this a signed-in user got no live\nprogress on their own analysis.",
+    "operationId": "job_events_jobs__job_id__events_get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/board/moves": {
+   "get": {
+    "tags": [
+     "board"
+    ],
+    "summary": "Board Moves",
+    "description": "Every legal move from a position, with the position each one reaches.\n\nPromotions appear as four separate entries sharing a from/to square, so\na client can detect that case and offer a picker without knowing the\npromotion rules itself.",
+    "operationId": "board_moves_board_moves_get",
+    "parameters": [
+     {
+      "name": "fen",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Fen"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Board Moves Board Moves Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/me": {
+   "get": {
+    "tags": [
+     "accounts"
+    ],
+    "summary": "Me",
+    "description": "The signed-in user and their stats, creating the stats row if absent.",
+    "operationId": "me_me_get",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Me Me Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/me/analyses": {
+   "get": {
+    "tags": [
+     "accounts"
+    ],
+    "summary": "My Analyses",
+    "description": "This user's past analyses, newest first.\n\nSummary only. `result_json` holds a whole Part A report plus Part B's\ncommentary, and returning twenty of those would be megabytes.",
+    "operationId": "my_analyses_me_analyses_get",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 20,
+       "title": "Limit"
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 0,
+       "title": "Offset"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response My Analyses Me Analyses Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/me/analyses/{analysis_id}": {
+   "get": {
+    "tags": [
+     "accounts"
+    ],
+    "summary": "My Analysis",
+    "description": "One full analysis. Filtered by user_id as well as id -- see select().",
+    "operationId": "my_analysis_me_analyses__analysis_id__get",
+    "parameters": [
+     {
+      "name": "analysis_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Analysis Id"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response My Analysis Me Analyses  Analysis Id  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "accounts"
+    ],
+    "summary": "Delete Analysis",
+    "description": "Remove one saved analysis.\n\nWorth having rather than relying on the 30-cap to evict: the cap drops\nthe OLDEST, which is not necessarily the one the user wants gone.",
+    "operationId": "delete_analysis_me_analyses__analysis_id__delete",
+    "parameters": [
+     {
+      "name": "analysis_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Analysis Id"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Delete Analysis Me Analyses  Analysis Id  Delete"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/play/bots": {
+   "get": {
+    "tags": [
+     "play"
+    ],
+    "summary": "List Bots",
+    "description": "The opponents on offer. No auth: this is a menu.",
+    "operationId": "list_bots_api_play_bots_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response List Bots Api Play Bots Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/play/new": {
+   "post": {
+    "tags": [
+     "play"
+    ],
+    "summary": "New Game",
+    "description": "Start a game. Anonymous is allowed -- playing a bot needs no account,\nand requiring one to try the feature would be a pointless gate.",
+    "operationId": "new_game_api_play_new_post",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/NewGameRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response New Game Api Play New Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/play/{game_id}": {
+   "get": {
+    "tags": [
+     "play"
+    ],
+    "summary": "Get Game",
+    "operationId": "get_game_api_play__game_id__get",
+    "parameters": [
+     {
+      "name": "game_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Game Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Get Game Api Play  Game Id  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/play/{game_id}/move": {
+   "post": {
+    "tags": [
+     "play"
+    ],
+    "summary": "Play Move",
+    "description": "Play one move and get the bot's reply in the same response.\n\nOne round trip rather than two: the client has nothing useful to show\nbetween the two halves, and a second request only adds a window in which\nthe board is in a state neither player chose.",
+    "operationId": "play_move_api_play__game_id__move_post",
+    "parameters": [
+     {
+      "name": "game_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Game Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PlayMoveRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Play Move Api Play  Game Id  Move Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/play/{game_id}/resign": {
+   "post": {
+    "tags": [
+     "play"
+    ],
+    "summary": "Resign Game",
+    "operationId": "resign_game_api_play__game_id__resign_post",
+    "parameters": [
+     {
+      "name": "game_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Game Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Resign Game Api Play  Game Id  Resign Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/auth/signup": {
+   "post": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Signup",
+    "description": "Create an account and sign in.\n\nRate limited on the caller's address: account creation is the one\nunauthenticated write in the app, and without a limit it is a free way\nto fill the disk.",
+    "operationId": "signup_api_auth_signup_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CredentialsRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Signup Api Auth Signup Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/auth/login": {
+   "post": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Login",
+    "description": "Sign in. The failure message never says WHICH half was wrong.",
+    "operationId": "login_api_auth_login_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CredentialsRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Login Api Auth Login Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/auth/logout": {
+   "post": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Logout",
+    "description": "Drop the session server-side, so the token stops working.",
+    "operationId": "logout_api_auth_logout_post",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Logout Api Auth Logout Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/puzzles/next": {
+   "get": {
+    "tags": [
+     "puzzles"
+    ],
+    "summary": "Next Puzzle",
+    "description": "A puzzle near the user's rating that they have not already attempted.\n\nThe rating window widens on each retry, because a 50,000-puzzle subset\nhas thin spots and an empty band must degrade into \"slightly off-rating\"\nrather than into an error.\n\nThe solution is NOT in the response. It stays server-side and the\nattempt is validated here -- see partC.Puzzle.to_dict.",
+    "operationId": "next_puzzle_puzzles_next_get",
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Next Puzzle Puzzles Next Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/puzzles/{puzzle_id}/step": {
+   "post": {
+    "tags": [
+     "puzzles"
+    ],
+    "summary": "Step Attempt",
+    "description": "Validate the line so far and, when it is right, play the scripted reply.\n\nAn interactive board needs this: the player clicks one move and the\nopponent has to answer before they can click the next one, but the\nopponent's replies live inside the hidden solution, so only the server\ncan supply them. This endpoint does NOT touch the rating -- the client\nsubmits the finished line to /attempt for that.\n\nDeliberately it does not say what the right move was on a wrong one.\nThe client auto-submits as soon as a step comes back wrong, and /attempt\nreveals the expected move there, so the answer still reaches the player\nthrough the path that also records the loss.\n\nKnown limitation: a hand-written client could call this repeatedly to\nfind the solution for free and then submit a clean line to /attempt.\nClosing that needs per-attempt server state (a row written when the\npuzzle is served, so the rating is already committed before the first\nstep). Noted in decisions.md rather than papered over.",
+    "operationId": "step_attempt_puzzles__puzzle_id__step_post",
+    "parameters": [
+     {
+      "name": "puzzle_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Puzzle Id"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AttemptRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Step Attempt Puzzles  Puzzle Id  Step Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/puzzles/{puzzle_id}/attempt": {
+   "post": {
+    "tags": [
+     "puzzles"
+    ],
+    "summary": "Submit Attempt",
+    "description": "Validate an attempt, record it, and update the rating.\n\nValidation happens here, never in the client: a client that decided\nwhether it was right could award itself any rating. The attempt and the\nstats update go through one Postgres function so a second tab cannot\nlose an update.",
+    "operationId": "submit_attempt_puzzles__puzzle_id__attempt_post",
+    "parameters": [
+     {
+      "name": "puzzle_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Puzzle Id"
+      }
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AttemptRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Submit Attempt Puzzles  Puzzle Id  Attempt Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "AnalyseAccepted": {
+    "properties": {
+     "job_id": {
+      "type": "string",
+      "title": "Job Id"
+     },
+     "state": {
+      "type": "string",
+      "title": "State"
+     },
+     "poll": {
+      "type": "string",
+      "title": "Poll"
+     },
+     "events": {
+      "type": "string",
+      "title": "Events"
+     }
+    },
+    "type": "object",
+    "required": [
+     "job_id",
+     "state",
+     "poll",
+     "events"
+    ],
+    "title": "AnalyseAccepted"
+   },
+   "AnalyseRequest": {
+    "properties": {
+     "lichess_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Lichess Url",
+      "examples": [
+       "https://lichess.org/abc123xy"
+      ]
+     },
+     "chesscom_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Chesscom Url"
+     },
+     "chesscom_username": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Chesscom Username"
+     },
+     "chesscom_month": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^\\d{4}/\\d{2}$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Chesscom Month"
+     },
+     "pgn": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pgn"
+     },
+     "fen": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fen"
+     },
+     "depth": {
+      "type": "integer",
+      "maximum": 22.0,
+      "minimum": 6.0,
+      "title": "Depth",
+      "default": 14
+     },
+     "multipv": {
+      "type": "integer",
+      "maximum": 5.0,
+      "minimum": 1.0,
+      "title": "Multipv",
+      "default": 3
+     },
+     "estimate_rating": {
+      "type": "boolean",
+      "title": "Estimate Rating",
+      "default": true
+     },
+     "commentary": {
+      "type": "boolean",
+      "title": "Commentary",
+      "default": true
+     }
+    },
+    "type": "object",
+    "title": "AnalyseRequest",
+    "description": "Exactly one source. Mirrors the four A.1 adapters.\n\nchesscom_username is required alongside chesscom_url: the Chess.com API\nhas no get-game-by-url endpoint, so the game has to be found by scanning\nthat player's monthly archives."
+   },
+   "AttemptRequest": {
+    "properties": {
+     "moves": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 40,
+      "title": "Moves"
+     },
+     "ms_taken": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ms Taken"
+     }
+    },
+    "type": "object",
+    "title": "AttemptRequest",
+    "description": "The moves the player made, in UCI or SAN."
+   },
+   "CredentialsRequest": {
+    "properties": {
+     "username": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Username"
+     },
+     "password": {
+      "type": "string",
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Password"
+     }
+    },
+    "type": "object",
+    "required": [
+     "username",
+     "password"
+    ],
+    "title": "CredentialsRequest",
+    "description": "Username and password. Never logged, never echoed back."
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "NewGameRequest": {
+    "properties": {
+     "bot": {
+      "type": "string",
+      "maxLength": 32,
+      "minLength": 1,
+      "title": "Bot"
+     },
+     "color": {
+      "type": "string",
+      "pattern": "^(white|black|random)$",
+      "title": "Color",
+      "default": "white"
+     }
+    },
+    "type": "object",
+    "required": [
+     "bot"
+    ],
+    "title": "NewGameRequest"
+   },
+   "PlayMoveRequest": {
+    "properties": {
+     "uci": {
+      "type": "string",
+      "maxLength": 5,
+      "minLength": 4,
+      "title": "Uci"
+     }
+    },
+    "type": "object",
+    "required": [
+     "uci"
+    ],
+    "title": "PlayMoveRequest"
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   }
+  }
+ }
+}

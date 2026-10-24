@@ -1,0 +1,20 @@
+.venv/
+.git/
+.env
+__pycache__/
+*.pyc
+plan.md
+
+# Offline-only: the Maia-2 conversion script imports torch and must never
+# be installable in the deployed image (E.3).
+tools/
+
+data/puzzles/
+tests/
+
+# E.4 frontend. The SOURCE is needed by the Node build stage; the installed
+# modules and any local build are not -- the image takes static/ from that
+# stage instead, so a stale local build cannot shadow it.
+frontend/node_modules/
+frontend/dist/
+static/

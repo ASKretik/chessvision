@@ -1,0 +1,59 @@
+.pstrip {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 32px;
+  font-size: var(--fs-sm);
+}
+
+.pstrip-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  flex: 0 0 auto;
+}
+.pstrip-dot.is-white {
+  background: var(--eval-white);
+}
+.pstrip-dot.is-black {
+  background: var(--eval-black);
+  border: 1px solid var(--border);
+}
+
+.pstrip-name {
+  font-weight: 600;
+}
+.pstrip-rating {
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+}
+
+/* Captured pieces sit at a fraction of board size and overlap slightly, the
+   way lichess stacks them, so a full set does not push the clock off the row. */
+.pstrip-captured {
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.pstrip-captured .piece {
+  width: 16px;
+  height: 16px;
+  margin-right: -5px;
+  opacity: 0.85;
+}
+.pstrip-plus {
+  margin-left: var(--sp-3);
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+}
+
+.pstrip-clock {
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+  padding: 2px var(--sp-2);
+  border-radius: var(--radius);
+  background: var(--raised);
+  flex: 0 0 auto;
+}

@@ -1,0 +1,209 @@
+{
+ "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+ "turn": "white",
+ "in_check": false,
+ "is_game_over": false,
+ "outcome": null,
+ "legal": [
+  {
+   "uci": "g1h3",
+   "san": "Nh3",
+   "from": "g1",
+   "to": "h3",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/8/7N/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+   "is_check": false,
+   "is_checkmate": false
+  },
+  {
+   "uci": "g1f3",
+   "san": "Nf3",
+   "from": "g1",
+   "to": "f3",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+   "is_check": false,
+   "is_checkmate": false
+  },
+  {
+   "uci": "b1c3",
+   "san": "Nc3",
+   "from": "b1",
+   "to": "c3",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/8/2N5/PPPPPPPP/R1BQKBNR b KQkq - 1 1",
+   "is_check": false,
+   "is_checkmate": false
+  },
+  {
+   "uci": "b1a3",
+   "san": "Na3",
+   "from": "b1",
+   "to": "a3",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/8/N7/PPPPPPPP/R1BQKBNR b KQkq - 1 1",
+   "is_check": false,
+   "is_checkmate": false
+  },
+  {
+   "uci": "h2h3",
+   "san": "h3",
+   "from": "h2",
+   "to": "h3",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/8/7P/PPPPPPP1/RNBQKBNR b KQkq - 0 1",
+   "is_check": false,
+   "is_checkmate": false
+  },
+  {
+   "uci": "g2g3",
+   "san": "g3",
+   "from": "g2",
+   "to": "g3",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/8/6P1/PPPPPP1P/RNBQKBNR b KQkq - 0 1",
+   "is_check": false,
+   "is_checkmate": false
+  },
+  {
+   "uci": "f2f3",
+   "san": "f3",
+   "from": "f2",
+   "to": "f3",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/8/5P2/PPPPP1PP/RNBQKBNR b KQkq - 0 1",
+   "is_check": false,
+   "is_checkmate": false
+  },
+  {
+   "uci": "e2e3",
+   "san": "e3",
+   "from": "e2",
+   "to": "e3",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/8/4P3/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+   "is_check": false,
+   "is_checkmate": false
+  },
+  {
+   "uci": "d2d3",
+   "san": "d3",
+   "from": "d2",
+   "to": "d3",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/8/3P4/PPP1PPPP/RNBQKBNR b KQkq - 0 1",
+   "is_check": false,
+   "is_checkmate": false
+  },
+  {
+   "uci": "c2c3",
+   "san": "c3",
+   "from": "c2",
+   "to": "c3",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/8/2P5/PP1PPPPP/RNBQKBNR b KQkq - 0 1",
+   "is_check": false,
+   "is_checkmate": false
+  },
+  {
+   "uci": "b2b3",
+   "san": "b3",
+   "from": "b2",
+   "to": "b3",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/8/1P6/P1PPPPPP/RNBQKBNR b KQkq - 0 1",
+   "is_check": false,
+   "is_checkmate": false
+  },
+  {
+   "uci": "a2a3",
+   "san": "a3",
+   "from": "a2",
+   "to": "a3",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/8/P7/1PPPPPPP/RNBQKBNR b KQkq - 0 1",
+   "is_check": false,
+   "is_checkmate": false
+  },
+  {
+   "uci": "h2h4",
+   "san": "h4",
+   "from": "h2",
+   "to": "h4",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/7P/8/PPPPPPP1/RNBQKBNR b KQkq - 0 1",
+   "is_check": false,
+   "is_checkmate": false
+  },
+  {
+   "uci": "g2g4",
+   "san": "g4",
+   "from": "g2",
+   "to": "g4",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/6P1/8/PPPPPP1P/RNBQKBNR b KQkq - 0 1",
+   "is_check": false,
+   "is_checkmate": false
+  },
+  {
+   "uci": "f2f4",
+   "san": "f4",
+   "from": "f2",
+   "to": "f4",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/5P2/8/PPPPP1PP/RNBQKBNR b KQkq - 0 1",
+   "is_check": false,
+   "is_checkmate": false
+  },
+  {
+   "uci": "e2e4",
+   "san": "e4",
+   "from": "e2",
+   "to": "e4",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+   "is_check": false,
+   "is_checkmate": false
+  },
+  {
+   "uci": "d2d4",
+   "san": "d4",
+   "from": "d2",
+   "to": "d4",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1",
+   "is_check": false,
+   "is_checkmate": false
+  },
+  {
+   "uci": "c2c4",
+   "san": "c4",
+   "from": "c2",
+   "to": "c4",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/2P5/8/PP1PPPPP/RNBQKBNR b KQkq - 0 1",
+   "is_check": false,
+   "is_checkmate": false
+  },
+  {
+   "uci": "b2b4",
+   "san": "b4",
+   "from": "b2",
+   "to": "b4",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/1P6/8/P1PPPPPP/RNBQKBNR b KQkq - 0 1",
+   "is_check": false,
+   "is_checkmate": false
+  },
+  {
+   "uci": "a2a4",
+   "san": "a4",
+   "from": "a2",
+   "to": "a4",
+   "promotion": null,
+   "fen_after": "rnbqkbnr/pppppppp/8/8/P7/8/1PPPPPPP/RNBQKBNR b KQkq - 0 1",
+   "is_check": false,
+   "is_checkmate": false
+  }
+ ]
+}

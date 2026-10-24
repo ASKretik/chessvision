@@ -1,0 +1,6 @@
+{
+ "ply": 26,
+ "comment": "Placing the knight on c6 leaves the bishop on c8 blocked and misses the more active Bd7, which would have developed a piece while keeping the knight flexible.",
+ "cached": false,
+ "rejected_because": []
+}

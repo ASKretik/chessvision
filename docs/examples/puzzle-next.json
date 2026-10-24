@@ -1,0 +1,22 @@
+{
+ "puzzle": {
+  "id": "p1",
+  "fen": "q5nr/1ppknQpp/3p4/1P2p3/4P3/B1PP1b2/B5PP/5K2 w - - 1 18",
+  "side_to_move": "white",
+  "rating": 1500,
+  "rating_deviation": 80,
+  "popularity": 90,
+  "nb_plays": 500,
+  "themes": [
+   "mateIn2"
+  ],
+  "moves_required": 2,
+  "game_url": null,
+  "opening_tags": []
+ },
+ "your_rating": 1500,
+ "rating_window": [
+  1425,
+  1625
+ ]
+}

@@ -1,0 +1,198 @@
+.board-wrap {
+  position: relative;
+  width: 100%;
+}
+
+/* BOTH axes must be declared. With only columns, the eight ranks become
+ * implicit rows sized to their content: a rank holding pieces renders taller
+ * than an empty one and the squares stop being square. This is a real bug
+ * that shipped in the mockup — do not remove grid-template-rows.
+ *
+ * The width is snapped to a multiple of 8 so squares land on whole pixels;
+ * a 401px board gives half-pixel edges and visible seams between squares. */
+.board {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-rows: repeat(8, minmax(0, 1fr));
+  aspect-ratio: 1;
+  width: 100%;
+  min-width: 240px;
+  max-width: var(--board-max);
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+  container-type: inline-size;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.sq {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sq-light {
+  background: var(--sq-light);
+}
+.sq-dark {
+  background: var(--sq-dark);
+}
+
+.sq.is-last {
+  box-shadow: inset 0 0 0 100px var(--sq-last);
+}
+.sq.is-sel {
+  box-shadow: inset 0 0 0 100px var(--sq-sel);
+}
+.sq.is-premove {
+  box-shadow: inset 0 0 0 100px var(--sq-premove);
+}
+.sq.is-check {
+  background-image: radial-gradient(
+    circle at center,
+    rgba(255, 0, 0, 0.85) 0%,
+    rgba(255, 0, 0, 0.45) 40%,
+    transparent 80%
+  );
+}
+
+/* Legal destinations: a dot on an empty square, a ring on a capture. */
+.sq.is-dest::after {
+  content: '';
+  position: absolute;
+  width: 28%;
+  height: 28%;
+  border-radius: 50%;
+  background: var(--sq-dest);
+}
+.sq.is-capture::after {
+  content: '';
+  position: absolute;
+  inset: 6%;
+  border-radius: 50%;
+  border: 0.5cqw solid var(--sq-dest);
+}
+
+.sq[data-focused='true'] {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  z-index: 2;
+}
+
+/* The cburnett SVGs carry their own colour and outline, so they need no
+ * text-shadow or tinting — only a size. They fill the square the way lichess
+ * sets them: the artwork has its own margin inside the 45x45 viewBox, so
+ * 100% lands the visible ink at about 85% of the square. */
+.piece {
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  transition: transform var(--anim, 200ms) ease-out;
+}
+
+/* Coordinates render in the opposite square's colour, which measures 2.29 and
+ * fails AA. Acceptable ONLY because they are redundant: the file and rank are
+ * in every move label and in each square's aria-label. Do not use this trick
+ * for anything load-bearing. */
+.coord {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 2.1cqw;
+  font-weight: 600;
+  opacity: 0.85;
+}
+.coord-rank {
+  top: 2%;
+  left: 4%;
+}
+.coord-file {
+  bottom: 2%;
+  right: 4%;
+}
+.sq-light .coord {
+  color: var(--sq-dark);
+}
+.sq-dark .coord {
+  color: var(--sq-light);
+}
+
+.glyph {
+  position: absolute;
+  top: 4%;
+  right: 4%;
+  width: 22%;
+  height: 22%;
+  border-radius: 50%;
+}
+.glyph-blunder {
+  background: var(--blunder-fill);
+}
+.glyph-mistake {
+  background: var(--mistake-fill);
+}
+.glyph-inaccuracy {
+  background: var(--inaccuracy-fill);
+}
+.glyph-best {
+  background: var(--best-fill);
+}
+
+.board-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.promo-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 3;
+}
+.promo {
+  position: absolute;
+  width: 12.5%;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  z-index: 4;
+}
+.promo-opt {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 7cqw;
+  cursor: pointer;
+}
+.promo-opt:hover {
+  background: var(--raised);
+}
+.promo-opt .piece {
+  width: 80%;
+  height: 80%;
+  margin: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .piece {
+    transition: none;
+  }
+}
+
+/* A move is in flight with the server. The board stays exactly where it is —
+   no layout shift, no spinner over the position — and simply stops taking
+   input, so a second click cannot race the first. */
+.board.is-busy {
+  cursor: progress;
+}
+.board.is-busy .sq {
+  cursor: progress;
+}

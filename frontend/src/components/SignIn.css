@@ -1,0 +1,31 @@
+.signin {
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  max-width: 44ch;
+}
+.signin .field {
+  display: grid;
+  gap: var(--sp-1);
+  font-size: var(--fs-sm);
+}
+.signin input {
+  min-height: 44px;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--ground);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font: inherit;
+}
+.signin-err {
+  margin: 0;
+  color: var(--blunder-text);
+  font-size: var(--fs-sm);
+}
+.signin-note {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  line-height: 1.5;
+}

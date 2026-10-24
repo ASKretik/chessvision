@@ -1,0 +1,145 @@
+.tp {
+  padding: var(--sp-4);
+  margin-top: var(--sp-5);
+}
+.tp h2 {
+  margin: 0;
+  font-size: var(--fs-md);
+}
+.tp-lead {
+  margin: var(--sp-1) 0 var(--sp-4);
+  font-size: var(--fs-sm);
+}
+
+.tp-sides {
+  display: grid;
+  gap: var(--sp-5);
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.tp-side h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-sm);
+}
+.tp-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+.tp-dot.is-white {
+  background: var(--eval-white);
+}
+.tp-dot.is-black {
+  background: var(--eval-black);
+  border: 1px solid var(--border);
+}
+
+.tp-stats {
+  display: flex;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  margin: 0 0 var(--sp-3);
+}
+.tp-stats div {
+  display: grid;
+  gap: 2px;
+}
+.tp-stats dt {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+.tp-stats dd {
+  margin: 0;
+  font-size: var(--fs-md);
+}
+
+.tp-group {
+  margin-top: var(--sp-3);
+}
+.tp-h4 {
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+.tp-empty {
+  margin: 0;
+  font-size: var(--fs-xs);
+}
+
+.tp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tp-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 32px;
+  padding: var(--sp-1) var(--sp-2);
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.tp-row:hover {
+  background: var(--raised);
+}
+.tp-move {
+  font-weight: 600;
+  min-width: 5.5em;
+}
+.tp-secs {
+  min-width: 3.5em;
+}
+.tp-ratio {
+  font-size: var(--fs-xs);
+}
+.tp-cx,
+.tp-only,
+.tp-label {
+  font-size: var(--fs-xs);
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+/* A long think on a LOW-complexity move is the interesting case, so that is
+   the one that gets emphasis — the opposite of a severity scale. */
+.tp-cx.is-low {
+  color: var(--mistake-text);
+  border-color: currentColor;
+}
+.tp-only {
+  color: var(--inaccuracy-text);
+  border-color: currentColor;
+}
+.tp-label.is-blunder {
+  color: var(--blunder-text);
+  border-color: currentColor;
+}
+.tp-label.is-mistake {
+  color: var(--mistake-text);
+  border-color: currentColor;
+}
+.tp-label.is-inaccuracy {
+  color: var(--inaccuracy-text);
+  border-color: currentColor;
+}
+
+/* The conjunction lists. `critical` is the one with a cost attached, so it
+   carries the blunder colour; the raw flag lists stay neutral. */
+.tp-h4.is-critical {
+  color: var(--blunder-text);
+}

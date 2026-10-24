@@ -1,0 +1,10 @@
+{
+ "puzzle_id": "p1",
+ "index": 0,
+ "correct": true,
+ "complete": false,
+ "moves_required": 2,
+ "opponent_reply": "d7d8",
+ "fen_after": "q2k2nr/1pp1nQpp/3pB3/1P2p3/4P3/B1PP1b2/6PP/5K2 w - - 3 19",
+ "accepted_alternative": false
+}

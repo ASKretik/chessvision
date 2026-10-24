@@ -1,0 +1,31 @@
+{
+ "ready": false,
+ "checks": {
+  "supabase": {
+   "ok": false,
+   "detail": "not configured"
+  },
+  "stockfish": {
+   "ok": true,
+   "path": "/opt/homebrew/bin/stockfish"
+  },
+  "analysis_core": {
+   "ok": true,
+   "detail": null
+  },
+  "commentary_core": {
+   "ok": true,
+   "detail": null,
+   "llm_key_set": false
+  },
+  "memory": {
+   "ok": true,
+   "used_mb": 189.7,
+   "limit_mb": 512.0,
+   "source": "partial"
+  }
+ },
+ "jobs": {
+  "total": 0
+ }
+}
